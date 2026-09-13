@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.66.0] - 2026-09-13
+
 ### Added
 
 - **Notes gain category management, a category picker and an AND filter.** Manage personal
@@ -200,7 +202,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   system, the same way the server does. Without that, this change would have produced data the app
   itself could no longer read.
 
-
 - **The recurring-payment dialog now says that editing a series also rewrites its first booking**
   (#1035). A series original is two things at once: the template every future occurrence is built
   from, and the first hand-entered booking. `PUT /budget/:id/series` writes title, amount, category
@@ -317,15 +318,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   set to read-only or its account is gone - it changes nothing at the provider, and a move the user
   took back must not come back to life once writing is allowed again. Google and CalDAV alike.
 
-- **A review run that stopped at its gate is named as such, even when it first denied having
-  reviewed** (#1101). The check behind the automated review reads the run's closing text to say
-  why a silent run went red. It only looked at the first mention of "already reviewed", so a text
-  that negated it once and then affirmed it ("has not already reviewed this HEAD ... has already
-  reviewed this PR, so I should stop here") was diagnosed as unknown, pointing at a missing post
-  instead of the gate. Every mention now counts, the way every "stop" already did. The check was
-  red either way; only its message changes. The one exception that can turn it green still reads
-  the narrower way.
-
 - **The event detail names the day a multi-day event ends** (#1102). The "When" row showed the
   start date and, of the end, only the time: an event from 10 September 14:00 to 12 September 11:00
   read as "14:00 - 11:00" on a single day that ends before it begins, and an all-day event across
@@ -349,27 +341,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   still pull the sheet closed. A pull that has already started stays tracked when the finger
   reverses, so the panel still returns to rest. Under the same setting the swipe now ends
   500 to 675 px down.
-
-- **The automated review no longer loses its result on a later push.** On a pull request's second
-  push the review first reads what has already been said, and the tools it reached for - `gh api` on
-  the pull request's reviews and comments, `git show`, `git fetch` of a commit - were not in its
-  allowed list. The run on #1116 did the review, collected seven refusals and posted nothing, which
-  the evidence step rightly turned red; 17 of the last 40 runs carried refusals like these. The list
-  now lets it read the repository through `gh api` and through read-only git commands.
-
-  Writing through `gh api` stays blocked by a second list that denies every write form (`-X`,
-  `--method`, `-f`, `-F`, `--field`, `--raw-field`, `--input`), bundled short flags such as `-if`,
-  and `--hostname`, which would send the request - headers included - to another host. That list is
-  load-bearing, measured with the CLI: a rule on the path alone let a POST through. The same list
-  keeps the read-only git commands read-only: `git show`, `git log`, `git diff` and `git rev-list`
-  write a file with `--output`, and on a runner that file can be the environment of the next step. Running code from the checkout
-  (`node`, `npm`, the test suites), writing files and fetching web pages stay out, because the job
-  holds a token that can write to pull requests and the checkout is the pull request's own code. A
-  guard in `test:claude-review-workflow` holds both lists.
-
-  Worth knowing: a pull request that touches the review workflow makes the action skip itself, so
-  this one is not reviewed by it, and after the merge an older branch skips the review until it is
-  rebased.
 
 - **The Module options settings page describes what it actually contains.** Its description named
   only Budget, Health and Housekeeping - accurate when it was written, but Tasks and Schedule have
@@ -400,37 +371,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   UTC server viewed in New York: 3:25pm to 3:30pm was displayed as 3:25pm to 7:30pm. The end now
   follows the storage format of the start it belongs to. Locally created series are unaffected:
   there both sides read the same server zone and the conversion cancels out.
-
-- **A failing test in the three suites that start the server now turns the run red.** Those suites
-  import `server/index.js` as a program rather than reading it as a file, which opens a real HTTP
-  socket and starts the background schedulers. Their handles kept the process alive, so each suite
-  ended with `process.exit(0)` in its `after()` hook - and that call overwrites the exit code
-  node:test only sets when the process ends by itself. Measured on 2026-09-09: a deliberately wrong
-  assertion reported `exit=0` while two `✖` lines stood in the log and the summary was cut off. In
-  the `npm test` chain these suites could only ever turn red through a top-level error, never
-  through a failed `test()` block.
-
-  Forcing a better code does not work. Inside the `after()` hook `process.exitCode` is still
-  `undefined`, also after `setImmediate` and after `setTimeout(…, 50)` - both measured - so
-  `process.exit(process.exitCode ?? 0)` reads nothing there. The way out is to stop calling
-  `process.exit` at all and clear the handles instead. Exactly three held the process:
-  `getActiveResourcesInfo()` named a `TCPServerWrap` and two `Timeout`. The shared
-  `test/server-ready.js` now closes the server, the two auto-sync timers `unref()` like the four
-  schedulers that already did, and the backup cron stays off under the documented
-  `BACKUP_ENABLED=false`. The process then ends on its own and node:test sets the real code, which
-  also counts a failure in a hook or an uncaught exception rather than only one inside a `test()`.
-
-  The proof is a program, not a text search. `test:suite-exit-code` runs a fixture suite of exactly
-  that build twice, once green and once red, and demands 0 and 1 - both times with an end of its
-  own, no timeout. With the `unref()` taken out again the guard turns red on that timeout, while
-  the text guard beside it, which forbids `process.exit(` in a server-starting suite, stays green:
-  the wording would have survived what the behaviour did not.
-
-  Two things came along. The three suites no longer reserve fixed ports (13098-13100) and take
-  whichever one the kernel hands them, so two runs at the same time stop colliding. And the
-  database-isolation guard had to learn the same rule one file further out: it looked for `DB_PATH`
-  in the suite itself and would otherwise have reported all three for setting it through the shared
-  helper - which sets it earlier and more strictly than the form the guard knew.
 
 - **Late Notes saves no longer close a replacement dialog or hide a failed save.** A save response
   now belongs to the editor that started it. If that editor has already closed or is waiting behind
@@ -552,10 +492,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   mirrored in from Mealie or Tandoor stayed "1.5" in a German kitchen. Both directions now follow the
   set region - the reading side through the same transliteration as prices and shopping quantities,
   the writing side through the same number format - so a scaled quantity comes back out in the
-  notation the household reads, and the app can read its own output again the next time. The digits
-  of a scaled amount stay ASCII on purpose: the text is saved into the ingredient row and read back
-  when the meal moves to the shopping list, and a quantity in native digits would not arrive there
-  and would drop out of the totals. The separator is presentation and follows the region wherever
+  notation the household reads, and the app can read its own output again the next time. The
+  separator is presentation and follows the region wherever
   the region uses one the server reads - a comma in German, French or Czech, a dot in US English or
   Swiss German. Persian and Arabic use a third one, and there readability wins and the dot is
   written.
@@ -735,8 +673,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the read-only ICS feed now exports the replacement with standard `RECURRENCE-ID` semantics.
   Imported series keep their existing whole-series behavior. Generated local series and local
   series targeted for outbound sync retain their previous standalone-edit and deletion scopes.
-  Historic detached edits are left unchanged rather than guessed back into a series. iCloud auto-sync excludes
-  linked replacements and their masters, without excluding ordinary deletion-only exceptions.
+  Historic detached edits are left unchanged rather than guessed back into a series. iCloud
+  auto-sync excludes linked replacements and their masters, without excluding ordinary
+  deletion-only exceptions.
   Detaching a linked replacement retains its original-slot exception, so outbound targeting or a
   recurrence-rule round trip cannot resurrect a duplicate master occurrence. Changing a whole-series
   recurrence rule no longer forgets previously deleted occurrences. Truncating a series likewise
@@ -748,7 +687,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   writable push targets before accepting linked-series auto-sync, and MCP upcoming results retain
   their unrestricted future horizon while recurrence generation stops at the requested result count.
   ICS deletion exceptions keep the series' local time across daylight-saving changes even when
-  the stored UTC day differs; each exception needs at most three local-date candidates, not a series scan.
+  the stored UTC day differs; each exception needs at most three local-date candidates, not a
+  series scan.
 
 ## [2.65.3] - 2026-09-12
 
