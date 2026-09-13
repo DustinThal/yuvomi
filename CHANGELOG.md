@@ -24,6 +24,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   visit paid or editing one reloads that month instead of jumping back, and an empty month says
   which month it is.
 
+- **A shopping list follows what the rest of the household does, while it is open** (#1108). Two people
+  in the same shop used to see two different lists: what one ticked off stayed unticked on the
+  other's phone until that page was reloaded. The open list now hears about changes within about ten
+  seconds and redraws the affected rows in place - the same gesture as your own tap, no jump, no
+  animation - and rebuilds only when an item was added, removed, renamed or moved.
+
+  The server keeps a change counter per list, maintained by database triggers rather than by the
+  routes: shopping items are written from six modules (the list itself, meal-plan and recipe
+  imports, the housekeeping module, MCP, the CalDAV to-do sync), and a counter that every writer
+  has to remember is a counter one of them forgets. The counter also moves when a list is renamed,
+  and its row goes with the list, so a list someone else deletes disappears from your screen too.
+  The open page asks `GET /api/v1/shopping/versions` every ten seconds while the tab is visible,
+  and at once when it becomes visible or gets focus - the moment somebody looks at the phone. It
+  reloads only a list whose number moved, through the same request it used to open it, so there
+  is still one read path. Deliberately a poll and not an open stream: it works through any
+  reverse proxy, holds no connection, and can grow into a stream on the same counter later. Your
+  own taps do not cost a reload: the write routes answer with the counter before and after, and
+  the page skips the reload when nothing else moved in between.
+
 ### Fixed
 
 - **Housekeeping only offers visit actions you are allowed to take** (#1135). A paid visit is

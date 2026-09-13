@@ -140,7 +140,10 @@ const STUBS = {
     export const stagger = () => {};
     export const vibrate = () => {};
     export const wireScrollFade = () => ({ update: () => {}, destroy: () => {} });
-    export const scheduleUndoableDelete = () => {};
+    // Tests, die das Undo-Fenster selbst schliessen oder zuruecknehmen wollen,
+    // setzen globalThis.__undoStub = (opts) => {} und bekommen commit/restore
+    // in die Hand - dasselbe Muster wie __apiStub in /api.js.
+    export const scheduleUndoableDelete = (opts) => { globalThis.__undoStub?.(opts); };
     // Im Test gibt es keine Animation, die ausspielen koennte - der Aufrufer
     // awaitet das Ergebnis, also loest der Stub sofort auf.
     export const animationSettled = () => Promise.resolve();
