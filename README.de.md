@@ -80,18 +80,18 @@ Schalte an, was dein Haushalt braucht; der Rest bleibt aus dem Weg.
 | **Rezepte** | Rezepte anlegen, duplizieren und skalieren, Mahlzeiten damit vorbelegen oder die Zutaten auf eine Einkaufsliste schicken. Eine Mealie- oder Tandoor-Instanz lässt sich lesend spiegeln. |
 | **Vorrat** | Was wirklich im Haus ist: Menge, Lagerort und Mindesthaltbarkeit, mit Filtern für Ablauf und knappe Bestände und einer Meldung, bevor ein Datum erreicht ist. |
 | **Kalender** | Zwei-Wege-Sync mit Google und CalDAV, einseitiger Outlook-Push via Microsoft Graph, Kalender-Abos, Wiederholungen, Feiertage, Filter nach Person und Sichtbarkeit je Termin. |
-| **Dokumente** | Familiendateien hochladen, taggen, ansehen und ordnen, optional auf WebDAV oder Google Drive. |
+| **Dokumente** | Familiendateien hochladen, taggen, ansehen und in verschachtelten Ordnern ordnen, optional in einem lokalen Ordner, auf WebDAV oder in Google Drive. |
 | **Inventar** | Was dir gehört: Kaufpreis, Garantie, Zustand und Lagerort, mit verknüpften Belegen und Erinnerungen vor Fristablauf. Standardmäßig aus; Haushalte schalten es an. |
 | **Budget** | Einnahmen, Ausgaben, Konten, Darlehen, Abos und Planung je Kategorie, mit persönlichem Modus. Ein Eintrag kann seinen Betrag teilen und Titel und Kategorie für sich behalten, damit der Stand eines geteilten Kontos stimmt. |
 | **Hauswirtschaft** | Haushaltshilfen: Dienstpläne, Ein- und Ausstempeln, Tages- oder Stundenabrechnung, Aufgaben und Materialwünsche. |
-| **Entsorgung** | Wöchentliche oder feste monatliche Abholtermine je Abfallart, mit Einzelterminen und Verschieben oder Ausfallenlassen je Termin. Standardmäßig aus. |
+| **Entsorgung** | Wöchentliche, monatlich feste oder Wochentag-Abholtermine je Abfallart („der letzte Freitag"), mit Einzelterminen, Verschieben oder Ausfallenlassen je Termin und einem kommunalen ICS-Kalender, einmal importiert oder per URL abonniert. Standardmäßig aus. |
 | **Belohnungen** | Punkte auf Aufgaben schreiben der zugewiesenen Person gut, mit elterlich freigegebenem Katalog und nachvollziehbarem Konto. |
 | **Gesundheit** | Vitalwerte, Medikamente, Laborwerte, Aktivität und Zyklus je Mitglied, mit Verlaufsdiagrammen. |
 | **Schichtplan** | Rotierende Schichtmuster und feste Wochenpläne aus einem Zyklusmodell, mit Ausnahmen je Tag und einem ausdrücklichen freien Tag. Der Kalender zeigt sie als schreibgeschützte Ebene, beim Lesen berechnet - eine Musteränderung lässt keine veralteten Termine zurück. Standardmäßig aus. |
-| **Notizen &amp; Kontakte** | Farbige Markdown-Haftnotizen mit Checklisten, die man antippt statt zu bearbeiten, plus ein Kontaktverzeichnis mit CardDAV-Sync und vCard-Import/-Export. |
+| **Notizen &amp; Kontakte** | Farbige Markdown-Haftnotizen mit Checklisten, die man antippt statt zu bearbeiten, in persönlichen oder Haushalts-Kategorien, plus ein Kontaktverzeichnis mit CardDAV-Sync und vCard-Import/-Export. |
 | **Geburtstage** | Geburtstagsliste mit optionalen Namenstagen, automatischen Kalendereinträgen, Altersanzeige und Erinnerungen. |
 | **Familie** | Mitgliedsprofile mit Rollen, Fotos und Kontaktdaten. Neue Mitglieder kommen über einen Einladungslink und wählen ihr Passwort selbst. |
-| **Erinnerungen** | Erinnerungen an Aufgaben, Termine, Abo-Verlängerungen, Garantien, Inventar-Fristen und Mindesthaltbarkeit, per In-App-Kennzeichen, optionalem Push und Gotify-, ntfy-, Webhook- oder E-Mail-Kanälen des Haushalts. Eine Erinnerung an einem geteilten Termin erreicht alle Zugewiesenen, jeden mit einer eigenen Kopie zum Verschieben oder Verwerfen. |
+| **Erinnerungen** | Erinnerungen an Aufgaben, Termine, Schichten, Abo-Verlängerungen, Garantien, Inventar-Fristen, Mindesthaltbarkeit und Abfuhrtermine, per In-App-Kennzeichen, optionalem Push und Gotify-, ntfy-, Webhook- oder E-Mail-Kanälen des Haushalts. Eine Erinnerung an einem geteilten Termin erreicht alle Zugewiesenen, jeden mit einer eigenen Kopie zum Verschieben oder Verwerfen. |
 | **API-Token** | Bearer- / X-API-Key-Token mit OpenAPI-3.0-Spezifikation und eingebautem MCP-Endpunkt für KI-Agenten. Schreibende Aufrufe sind über einen optionalen `Idempotency-Key`-Header wiederholbar. |
 | **Backup** | Manuelle und geplante Sicherung und Wiederherstellung mit Rollback davor und optionalem Cloud-Upload. |
 
@@ -147,7 +147,7 @@ git clone https://github.com/ulsklyc/yuvomi.git && cd yuvomi
 node tools/installer/install-server.js
 ```
 
-Öffne **http://localhost:8090**. Braucht Node.js 18+ auf dem Host; der Container bringt sein eigenes Node 22 mit.
+Öffne **http://localhost:8090**. Braucht Node.js 18+ auf dem Host; der Container bringt sein eigenes Node 24 mit.
 
 ### Aus dem App-Store deines NAS
 

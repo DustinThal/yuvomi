@@ -80,18 +80,18 @@ Turn on what your household needs; the rest stays out of the way.
 | **Recipes** | Create, duplicate and scale recipes, then pre-fill meal slots or send the ingredients to a shopping list. A Mealie or Tandoor instance can be mirrored read-only. |
 | **Pantry** | What is actually in the house: amount, storage location and best-before date, with expiry and low-stock filters and a notification before a date is reached. |
 | **Calendar** | Two-way sync with Google and CalDAV, one-way Outlook push via Microsoft Graph, calendar subscriptions, recurring events, holiday overlays, filtering by person and per-event visibility. |
-| **Documents** | Upload, tag, preview and organize family files, with optional WebDAV or Google Drive storage. |
+| **Documents** | Upload, tag, preview and organize family files in nested folders, with optional storage in a local folder, on WebDAV or in Google Drive. |
 | **Inventory** | What you own: purchase price, warranty, condition and storage location, with linked receipts and deadline reminders. Off by default; households turn it on. |
 | **Budget** | Income, expenses, accounts, loans, subscriptions and per-category planning, with a personal mode. An entry can share its amount while keeping its title and category private, so a shared account's balance stays right. |
 | **Housekeeping** | Household staff: schedules, check-in/out, daily or hourly billing, chores and supply requests. |
-| **Waste collection** | Weekly or fixed-day-of-month pickup schedules per waste type, with one-off dates and per-occurrence moves or skips. Off by default. |
+| **Waste collection** | Weekly, fixed-day or nth-weekday pickup schedules per waste type ("the last Friday"), with one-off dates, per-occurrence moves or skips, and a municipal ICS calendar imported once or subscribed by URL. Off by default. |
 | **Rewards** | Points on tasks credit the assigned member, with a parent-approved catalog and an auditable ledger. |
 | **Health** | Per-member vitals, medications, labs, activity and cycle tracking, with trend charts. |
 | **Schedule** | Rotating shift patterns and fixed weekly timetables from one cycle model, with per-day overrides and an explicit free day. The calendar shows them as a read-only overlay computed on read, so changing a pattern leaves no stale appointments behind. Off by default. |
-| **Notes &amp; Contacts** | Colored Markdown sticky notes with checklists you tick off by tapping them, plus a contact directory with CardDAV sync and vCard import/export. |
+| **Notes &amp; Contacts** | Colored Markdown sticky notes with checklists you tick off by tapping them, sorted into personal or household categories, plus a contact directory with CardDAV sync and vCard import/export. |
 | **Birthdays** | Birthday and optional name-day tracker with automatic calendar events, age display and reminders. |
 | **Family** | Member profiles with roles, photos and contact details. New members join through an invite link and pick their own password. |
-| **Reminders** | Reminders on tasks, events, subscription renewals, warranties, inventory deadlines and best-before dates, via in-app badges, opt-in push, and household Gotify, ntfy, webhook or email channels. A reminder on a shared event reaches everyone assigned to it, each with their own copy to move or dismiss. |
+| **Reminders** | Reminders on tasks, events, shifts, subscription renewals, warranties, inventory deadlines, best-before dates and waste pickups, via in-app badges, opt-in push, and household Gotify, ntfy, webhook or email channels. A reminder on a shared event reaches everyone assigned to it, each with their own copy to move or dismiss. |
 | **API Tokens** | Bearer / X-API-Key tokens with an OpenAPI 3.0 spec and a built-in MCP endpoint for AI agents. Writes are retry-safe via an optional `Idempotency-Key` header. |
 | **Backup** | Manual and scheduled backup/restore with pre-restore rollback and optional cloud upload. |
 
@@ -147,7 +147,7 @@ git clone https://github.com/ulsklyc/yuvomi.git && cd yuvomi
 node tools/installer/install-server.js
 ```
 
-Open **http://localhost:8090**. Needs Node.js 18+ on the host; the container ships its own Node 22.
+Open **http://localhost:8090**. Needs Node.js 18+ on the host; the container ships its own Node 24.
 
 ### From your NAS app store
 
