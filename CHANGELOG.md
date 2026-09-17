@@ -61,6 +61,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   legible. Nobody has to change a setting; instances that had already turned HTTPS-only on were never
   affected.
 
+- **Around the turn of the month, Budget could show the wrong month for a few hours.** When you open
+  Budget without picking a month, it picks one for you. That pick followed UTC instead of the
+  household's own time zone, so east of UTC the first hours of a new month still showed the old one,
+  and west of UTC the last evening of a month already showed the next. The summary and the list below
+  it each made the pick separately, so they could even disagree with each other. Both now follow the
+  household time zone, the same one the rest of the app uses for what counts as today.
+
 ### Security
 
 - **Reading the calendar no longer reaches the contact book, the sync accounts, or the sync targets.**
