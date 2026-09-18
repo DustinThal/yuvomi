@@ -2989,6 +2989,8 @@
         "customWeeks": "Settimane",
         "sectionTitlePlural": "Promemoria",
         "sharedWithAssignees": "Anche chi è assegnato a questo evento riceve questo promemoria.",
+        "offsetAfterDue": "Dopo la scadenza",
+        "afterDueHint": "Questo promemoria è successivo alla data di scadenza ({{when}}) e resta invariato al salvataggio. Scegli un anticipo per spostarlo.",
         "readOnlyNotice": "I promemoria appartengono al Calendario. Senza permesso di scrittura lì, questa impostazione resta invariata."
     },
     "onboarding": {

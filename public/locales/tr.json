@@ -2989,6 +2989,8 @@
         "customWeeks": "Weeks",
         "sectionTitlePlural": "Hatırlatıcılar",
         "sharedWithAssignees": "Bu etkinliğe atanan kişiler de bu hatırlatmayı alır.",
+        "offsetAfterDue": "Son tarihten sonra",
+        "afterDueHint": "Bu hatırlatıcı son tarihten sonra ({{when}}) ve kaydettiğinizde değişmeden kalır. Taşımak için bir hatırlatma süresi seçin.",
         "readOnlyNotice": "Hatırlatıcılar Takvime aittir. Orada yazma yetkiniz yoksa bu ayar değişmeden kalır."
     },
     "onboarding": {

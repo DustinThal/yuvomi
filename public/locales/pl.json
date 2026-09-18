@@ -2886,6 +2886,8 @@
         "customWeeks": "Tygodnie",
         "sectionTitlePlural": "Przypomnienia",
         "sharedWithAssignees": "Osoby przypisane do tego wydarzenia również otrzymają to przypomnienie.",
+        "offsetAfterDue": "Po terminie",
+        "afterDueHint": "To przypomnienie wypada po terminie ({{when}}) i przy zapisie pozostaje bez zmian. Wybierz wyprzedzenie, aby je przesunąć.",
         "readOnlyNotice": "Przypomnienia należą do Kalendarza. Bez prawa zapisu tam to ustawienie pozostaje bez zmian."
     },
     "birthdays": {
