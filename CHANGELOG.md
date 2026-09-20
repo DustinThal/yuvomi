@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.68.0] - 2026-09-20
+
 ### Added
 
 - **A wall tablet can now tick a task off and ask for a reward, for whoever is standing in front of
