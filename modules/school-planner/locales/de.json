@@ -1,0 +1,70 @@
+{
+  "title": "Stundenplan",
+  "menu": "Stundenplan",
+  "module": "Stundenplan",
+  "loading": "Lade Stundenplan…",
+  "saved": "Stunde gespeichert",
+
+  "pupil.label": "Person",
+
+  "tab.tomorrow": "Morgen",
+  "tab.week": "Woche",
+  "tab.edit": "Bearbeiten",
+
+  "action.toEdit": "Plan eintragen",
+  "action.reload": "Neu laden",
+  "action.retry": "Erneut versuchen",
+  "action.prevWeek": "Eine Woche zurück",
+  "action.nextWeek": "Eine Woche vor",
+  "action.thisWeek": "Diese Woche",
+
+  "tomorrow.heading": "Morgen",
+  "tomorrow.nextSchoolDay": "Nächster Schultag",
+  "tomorrow.freeTomorrow": "Morgen ist frei - das ist der nächste Schultag.",
+  "tomorrow.none": "Kein Unterricht in Sicht",
+  "tomorrow.noneHint": "In den nächsten drei Wochen steht keine Stunde im Plan. Trage den Wochenplan ein, dann füllt sich diese Ansicht.",
+
+  "week.heading": "Woche {{range}}",
+  "week.time": "Stunde",
+  "week.empty": "Noch kein Plan",
+  "week.emptyHint": "Diese Woche ist leer. Der Plan wiederholt sich - einmal eintragen genügt für jede Woche.",
+
+  "edit.heading": "Wochenplan",
+  "edit.caption": "Wiederkehrende Stunden. Eine Änderung hier gilt für jede Woche.",
+  "edit.hint": "Tippe eine Zelle an, um Fach, Raum und Lehrer einzutragen. Für einen einzelnen Tag - Vertretung, Ausflug, Ausfall - nimm eine Abweichung im Schichtplan.",
+  "edit.emptyCell": "frei",
+  "edit.cellHint": "Gilt für jede Woche. Ohne Fach, Raum und Lehrer wird die Stunde frei.",
+  "edit.clear": "Stunde freiräumen",
+  "edit.noPlan": "Noch kein Plan für diese Person",
+  "edit.noPlanHint": "Der Plan ist ein 7-Tage-Muster. Lege ihn an, dann lässt er sich Zelle für Zelle füllen.",
+  "edit.noPeriods": "Keine Stundenzeiten vorhanden",
+  "edit.noPeriodsHint": "Ein Plan braucht Stunden mit Uhrzeit. Lege sie im Schichtplan an oder nimm die Einrichtung dieses Moduls.",
+
+  "setup.heading": "Stundenplan einrichten",
+  "setup.intro": "Die Einrichtung legt an, was noch fehlt - vorhandenes bleibt und wird wiedergefunden:",
+  "setup.periods": "Sechs Stunden von 08:00 bis 13:15 als Schichtarten (Zeiten später im Schichtplan änderbar)",
+  "setup.fields": "Die Felder Fach, Raum und Lehrer",
+  "setup.plan": "Ein 7-Tage-Muster „{{name}}“ ab diesem Montag",
+  "setup.create": "Einrichten",
+  "setup.running": "Richte ein…",
+  "setup.rerun": "Einrichtung wiederholen",
+  "setup.readOnly": "Kein Schreibrecht im Schichtplan - der Plan lässt sich ansehen, aber nicht ändern.",
+  "setup.partial": "Fertig, mit einer Einschränkung: an {{periods}} hängen die Felder noch nicht. Bearbeite eine Zelle dieser Stunden, dann holt es der Editor nach.",
+
+  "field.subject": "Fach",
+  "field.subjectPlaceholder": "z. B. Mathematik",
+  "field.room": "Raum",
+  "field.teacher": "Lehrer",
+
+  "error.load": "Stundenplan konnte nicht geladen werden",
+  "error.noPlan": "Kein Plan vorhanden",
+  "error.noPupil": "Keine Person ausgewählt",
+
+  "widgets.tomorrow": "Stunden morgen",
+  "widgets.all": "Alle",
+  "widgets.allLessons": "{{name}}: ganzen Plan zeigen",
+  "widgets.notSetUp": "Noch kein Stundenplan angelegt.",
+  "widgets.setUp": "Einrichten",
+  "widgets.free": "Kein Unterricht in den nächsten drei Wochen.",
+  "widgets.more": "… und {{rest}} mehr"
+}

@@ -1,0 +1,53 @@
+{
+  "manifestVersion": 1,
+  "id": "school-planner",
+  "name": "Stundenplan",
+  "version": "1.0.0",
+  "description": "Stundenplan als echtes Wochenraster, mit den Stunden des naechsten Tages zum Vorbereiten.",
+  "entry": "index.js",
+  "style": "style.css",
+  "icon": "graduation-cap",
+  "accent": "#4F46E5",
+  "menu": {
+    "show": true,
+    "label": "Stundenplan",
+    "labelKey": "menu",
+    "icon": "graduation-cap",
+    "order": 120
+  },
+  "page": {
+    "composition": "full",
+    "navigation": "standard",
+    "responsive": "standard"
+  },
+  "i18n": {
+    "defaultLocale": "de"
+  },
+  "capabilities": {
+    "permissions": {
+      "module": {
+        "label": "Stundenplan",
+        "labelKey": "module",
+        "icon": "graduation-cap"
+      },
+      "widgets": [
+        {
+          "id": "tomorrow",
+          "label": "Stunden morgen",
+          "labelKey": "widgets.tomorrow"
+        }
+      ]
+    },
+    "widgets": [
+      {
+        "id": "tomorrow",
+        "entry": "widgets/tomorrow.js",
+        "label": "Stunden morgen",
+        "labelKey": "widgets.tomorrow",
+        "icon": "graduation-cap",
+        "defaultSize": "2x2",
+        "defaultVisible": false
+      }
+    ]
+  }
+}
