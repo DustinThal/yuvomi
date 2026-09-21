@@ -131,6 +131,7 @@ const state = {
   weekStart: 1,
   weekOffset: 0,
   settings: null,
+  me: null,
 };
 
 /* ── Einstellungen ────────────────────────────────────────────────────────── */
@@ -248,6 +249,118 @@ function canWrite() {
   // Navigations-Id, kein Rechte-Schluessel - der Umweg ueber navPermissionKey()
   // liegt in isNavModuleReadOnly().
   return !isNavModuleReadOnly('schedule');
+}
+
+/**
+ * Wem gehoert diese Stunde - und darf ich deshalb ihre Zeiten aendern?
+ *
+ * Der Server entscheidet das in `ownTypeOrAdmin()` (server/routes/schedule.js:77):
+ * ein Admin darf jede Schichtart, alle anderen nur ihre eigene. Hier steht
+ * dieselbe Regel, damit der Knopf gar nicht erst erscheint, wo der Server mit
+ * 403 antwortet - und damit niemand auf einen Knopf tippt, der nur eine
+ * Fehlermeldung oeffnet.
+ *
+ * Der 403 bleibt trotzdem behandelt (`saveTimes`): dieselbe Regel steht auf
+ * zwei Seiten geschrieben, und wenn sie auseinanderlaeuft, gewinnt die des
+ * Servers. Ein Typ ohne Ersteller (`created_by == null`) liegt bei den Admins -
+ * ebenfalls wie dort.
+ */
+function canEditPeriodTimes(period) {
+  if (!canWrite()) return false;
+  if (state.me?.role === 'admin') return true;
+  return period?.created_by != null && Number(period.created_by) === Number(state.me?.id);
+}
+
+/** `HH:MM`, dieselbe Grammatik wie der Server (`time()` in server/middleware/validate.js). */
+const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/**
+ * Die Zeiten einer Stunde bearbeiten.
+ *
+ * Diese eine Stelle schreibt das Modul in eine Zeile des Schichtplans statt in
+ * eine Plan-Zelle - die Stunde SELBST ist die Zeile. Deshalb haengt an ihr
+ * dieselbe Frage wie an einer Schichtart-Karte, und deshalb geht genau ein
+ * Wertpaar hinaus: `PUT /schedule/shift-types/:id` liest jedes fehlende Feld
+ * als "nicht anfassen" (server/routes/schedule.js:319-322), also koennen Name,
+ * Kurzzeichen, Farbe und Symbol hier gar nicht ueberschrieben werden.
+ */
+function openTimesEditor(periodId) {
+  const period = state.shiftTypes.find((type) => Number(type.id) === Number(periodId));
+  if (!period) return;
+
+  const picker = (name, labelKey, value) => `
+      <label class="school-form__field">
+        <span>${esc(t(labelKey))}</span>
+        <yuvomi-datepicker name="${name}" type="time" label="${esc(t(labelKey))}" value="${esc(value ?? '')}"></yuvomi-datepicker>
+      </label>`;
+
+  openModal({
+    title: period.name,
+    size: 'sm',
+    content: `<form id="school-times-form" class="form-stack school-form">
+      ${picker('start_time', 'extensions.school-planner.times.start', period.start_time)}
+      ${picker('end_time', 'extensions.school-planner.times.end', period.end_time)}
+      <p class="school-hint">${esc(t('extensions.school-planner.times.hint'))}</p>
+      <div class="modal-actions">
+        <button type="submit" class="btn btn--primary">${esc(t('common.save'))}</button>
+      </div>
+    </form>`,
+    onSave: (modal) => {
+      const form = modal.querySelector('#school-times-form');
+      if (!form) return;
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        void saveTimes(form, period);
+      });
+    },
+  });
+}
+
+/**
+ * Die Zeiten schreiben.
+ *
+ * Beide Zeiten sind hier Pflicht, anders als beim Server: der liest eine
+ * FEHLENDE Zeit als "nicht anfassen", eine LEERE aber als `{value: null}` -
+ * eine geraeumte Zeit macht die Stunde damit zur ganztags-Zeit und wirft sie
+ * aus dem Plan (`periodTypes()` filtert ohne Uhrzeit). Ein Feld, das sich
+ * leeren laesst, verspricht hier also etwas, das es nicht gibt.
+ */
+async function saveTimes(form, period) {
+  const button = form.querySelector('button[type="submit"]');
+  const values = Object.fromEntries(new FormData(form));
+  const start = String(values.start_time ?? '').trim();
+  const end = String(values.end_time ?? '').trim();
+
+  if (!start || !end) {
+    window.yuvomi?.showToast(t('extensions.school-planner.times.required'), 'danger');
+    return;
+  }
+  if (!TIME_PATTERN.test(start) || !TIME_PATTERN.test(end)) {
+    window.yuvomi?.showToast(t('extensions.school-planner.times.invalid'), 'danger');
+    return;
+  }
+  // Ende vor Beginn liest der Kern als "ueber Mitternacht" und haengt ein "+1"
+  // an die Anzeige. Im Schichtplan ist das richtig, im Stundenplan immer ein
+  // Vertipper. Ein Vergleich als Zeichenkette genuegt: HH:MM ist nullgefuellt.
+  if (end <= start) {
+    window.yuvomi?.showToast(t('extensions.school-planner.times.order'), 'danger');
+    return;
+  }
+
+  if (button) button.disabled = true;
+  try {
+    await api.put(`/schedule/shift-types/${encodeURIComponent(period.id)}`, { start_time: start, end_time: end });
+    await closeModal();
+    await reload();
+    if (!state.signal?.aborted) {
+      state.notice = '';
+      renderShell();
+      window.yuvomi?.showToast(t('extensions.school-planner.times.saved'), 'success');
+    }
+  } catch (error) {
+    if (button) button.disabled = false;
+    window.yuvomi?.showToast(error?.message || String(error), 'danger');
+  }
 }
 
 /**
@@ -664,8 +777,15 @@ function renderEdit() {
         </button>
       </td>`;
     }).join('');
+    const times = formatTimeRange(period.start_time, period.end_time);
+    // Die Zeit ist der einzige Griff, den diese Ansicht in die Stunde selbst
+    // hat - und nur die eigene Stunde bekommt ihn. Ohne ihn sieht die Zeile
+    // aus wie die der Wochenansicht, in der es nichts zu tippen gibt.
     return `<tr>
-      <th scope="row" class="school-grid__time">${esc(formatTimeRange(period.start_time, period.end_time))}</th>
+      <th scope="row" class="school-grid__time">${canEditPeriodTimes(period)
+        ? `<button type="button" class="school-times" data-times="${esc(period.id)}"
+             aria-label="${esc(t('extensions.school-planner.times.edit', { period: period.name }))}">${esc(times)}</button>`
+        : esc(times)}</th>
       ${cells}
     </tr>`;
   }).join('');
@@ -904,6 +1024,11 @@ function renderSetup() {
 export async function render(container, context = {}) {
   state.container = container;
   state.signal = context.signal ?? null;
+  // Den Benutzer gibt der Router der Seite mit (public/router.js:1595,
+  // `{ user: currentUser, ... }`); die Kachel bekommt ihn ebenfalls. Gebraucht
+  // wird er fuer die eine Frage, die dieses Modul nicht selbst beantworten
+  // kann: wem gehoert diese Stunde.
+  state.me = context.user ?? null;
   state.settings = loadSettings();
   state.view = state.settings.view;
   state.loading = true;
@@ -933,6 +1058,14 @@ export async function render(container, context = {}) {
     if (cell) {
       if (canWrite()) openCellEditor(cell.dataset.cell);
       else window.yuvomi?.showToast(t('extensions.school-planner.setup.readOnly'), 'danger');
+      return;
+    }
+
+    // Vor `[data-action]` und nicht darin: die Zeit ist kein `data-action`,
+    // weil sie eine Id traegt und keine Aktion benennt.
+    const times = target.closest('[data-times]');
+    if (times) {
+      openTimesEditor(times.dataset.times);
       return;
     }
 

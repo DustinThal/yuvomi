@@ -48,8 +48,9 @@ finds again what is already there:
 | A 7-day pattern `Stundenplan <name>` | Anchored on this week's Monday |
 
 Times are not fixed here: they live on the period, so a school with a
-60-minute grid changes the times once in the shift planner and the timetable
-follows.
+60-minute grid changes the times once and the whole timetable follows. You can
+do that from either side - tap the time in **Bearbeiten**, or open the period's
+card under *Schichtarten* in the shift planner. Both write the same row.
 
 ## Using it
 
@@ -58,10 +59,17 @@ follows.
   and a useless one.
 - **Woche** - the grid. Rows are times, columns are the seven days, colours come
   from the subject. Week navigation, and today is marked.
-- **Bearbeiten** - the recurring grid. Tap a cell for subject, room and teacher.
+- **Bearbeiten** - the recurring grid. Tap a cell for subject, room and teacher,
+  or tap a period's time to change when it starts and ends.
 
 Clearing subject, room and teacher makes the period free: an empty cell is the
 absence of a row, not a row with an empty value.
+
+Editing a time is offered only where the server would allow it. A shift type
+belongs to the household but is changed by its creator or an admin
+(`ownTypeOrAdmin()` in `server/routes/schedule.js`), so the time is a button for
+those people and plain text for everyone else. Whoever ran **Einrichten** owns
+the six periods it created.
 
 ## Where the data lives
 

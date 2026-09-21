@@ -40,6 +40,15 @@
   "edit.noPeriods": "Keine Stundenzeiten vorhanden",
   "edit.noPeriodsHint": "Ein Plan braucht Stunden mit Uhrzeit. Lege sie im Schichtplan an oder nimm die Einrichtung dieses Moduls.",
 
+  "times.edit": "Zeiten von {{period}} ändern",
+  "times.start": "Beginn",
+  "times.end": "Ende",
+  "times.hint": "Gilt für jede Woche und für alle sieben Tage. Die Zeiten gehören zur Stunde, nicht zum Tag.",
+  "times.required": "Beginn und Ende werden beide gebraucht.",
+  "times.invalid": "Bitte Zeiten im Format HH:MM eintragen.",
+  "times.order": "Das Ende muss nach dem Beginn liegen.",
+  "times.saved": "Zeiten gespeichert",
+
   "setup.heading": "Stundenplan einrichten",
   "setup.intro": "Die Einrichtung legt an, was noch fehlt - vorhandenes bleibt und wird wiedergefunden:",
   "setup.periods": "Sechs Stunden von 08:00 bis 13:15 als Schichtarten (Zeiten später im Schichtplan änderbar)",

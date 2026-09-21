@@ -40,6 +40,15 @@
   "edit.noPeriods": "No period times yet",
   "edit.noPeriodsHint": "A timetable needs periods with a time. Create them in the shift planner or run this module's setup.",
 
+  "times.edit": "Change the times of {{period}}",
+  "times.start": "Start",
+  "times.end": "End",
+  "times.hint": "Applies to every week and to all seven days. The times belong to the period, not to the day.",
+  "times.required": "A start and an end are both needed.",
+  "times.invalid": "Please enter times as HH:MM.",
+  "times.order": "The end must be after the start.",
+  "times.saved": "Times saved",
+
   "setup.heading": "Set up the timetable",
   "setup.intro": "Setup creates what is missing - anything already there is kept and found again:",
   "setup.periods": "Six periods from 08:00 to 13:15 as shift types (times can be changed later in the shift planner)",

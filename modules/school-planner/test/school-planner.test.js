@@ -180,3 +180,68 @@ test('das Manifest bleibt im Format 1', () => {
   assert.match(manifest.version, /^\d+\.\d+\.\d+$/);
   assert.equal(manifest.i18n?.defaultLocale, 'de');
 });
+
+/* ── Die Zeiten ─────────────────────────────────────────────────────────────
+ *
+ * Die Zeit-Bearbeitung ist die einzige Stelle, an der dieses Modul eine Zeile
+ * des Schichtplans schreibt statt eine Plan-Zelle - und die einzige, an der es
+ * ein Recht pruefen muss, das ihm nicht selbst gehoert. Beides steht hier.
+ */
+
+test('die Zeit-Bearbeitung schickt genau die beiden Zeiten', () => {
+  // Der Server liest jedes FEHLENDE Feld als "nicht anfassen"
+  // (server/routes/schedule.js:319-322). Genau darauf beruht die Sicherheit
+  // dieser Stelle: gingen Name, Kurzzeichen, Farbe und Symbol mit, koennte
+  // eine aeltere Fassung dieses Moduls sie ueberschreiben.
+  const source = read('index.js');
+  const call = /api\.put\(`\/schedule\/shift-types\/\$\{[^}]+\}`, \{([^}]*)\}\)/.exec(source);
+  assert.ok(call, 'kein PUT auf /schedule/shift-types gefunden');
+  const payload = call[1].split(',').map((part) => part.split(':')[0].trim()).sort();
+  assert.deepEqual(payload, ['end_time', 'start_time'], `mitgeschickt wird: ${payload.join(', ')}`);
+});
+
+test('die Zeit ist nur bei eigener Stunde ein Knopf', () => {
+  // Dieselbe Regel wie `ownTypeOrAdmin()` auf dem Server: ein Admin darf jede
+  // Schichtart, alle anderen nur ihre eigene. Ein Knopf, den der Server mit
+  // 403 beantwortet, ist ein Versprechen, das die Oberflaeche nicht halten
+  // kann - er darf gar nicht erst entstehen.
+  const source = read('index.js');
+  const rule = /function canEditPeriodTimes\(period\)\s*\{([\s\S]*?)\n\}/.exec(source);
+  assert.ok(rule, 'canEditPeriodTimes fehlt');
+  assert.match(rule[1], /canWrite\(\)/, 'das Modul-Leserecht fehlt in der Regel');
+  assert.match(rule[1], /role === 'admin'/, 'die Admin-Ausnahme fehlt in der Regel');
+  assert.match(rule[1], /created_by/, 'die Eigentuemer-Pruefung fehlt in der Regel');
+  // Und der Knopf haengt an dieser Regel - nicht an canWrite() allein.
+  assert.match(source, /canEditPeriodTimes\(period\)\s*\n?\s*\?\s*`<button[^`]*data-times=/,
+    'data-times wird nicht an canEditPeriodTimes gebunden');
+});
+
+test('beide Zeiten sind Pflicht, bevor geschickt wird', () => {
+  // Der Server liest eine FEHLENDE Zeit als "nicht anfassen", eine LEERE aber
+  // als null - eine geraeumte Zeit macht die Stunde zur ganztags-Zeit und
+  // wirft sie aus dem Plan. Die Pruefung muss also VOR dem Schreiben stehen.
+  const source = read('index.js');
+  const guard = source.indexOf("if (!start || !end)");
+  const write = source.indexOf("api.put(`/schedule/shift-types/");
+  assert.ok(guard > -1, 'die Pflicht-Pruefung fehlt');
+  assert.ok(write > -1, 'der Schreibvorgang fehlt');
+  assert.ok(guard < write, 'die Pflicht-Pruefung steht hinter dem Schreibvorgang');
+});
+
+test('die Zeit-Grammatik ist dieselbe wie die des Servers', () => {
+  // Zwei Kopien derselben Regel, und die des Servers gewinnt: laeuft sie
+  // auseinander, weist der Server ab, was die Oberflaeche durchgelassen hat.
+  // Der Test liest die Server-Datei, wenn er sie findet - im Modulordner allein
+  // gibt es sie nicht, und dann sagt er das, statt still zu bestehen.
+  const serverPath = path.join(ROOT, '..', '..', 'server', 'middleware', 'validate.js');
+  if (!existsSync(serverPath)) {
+    assert.ok(true, 'Server-Datei nicht vorhanden - Modul wurde einzeln kopiert');
+    return;
+  }
+  const mine = /const TIME_PATTERN = (\/[^\n]+\/);/.exec(read('index.js'));
+  assert.ok(mine, 'TIME_PATTERN steht nicht mehr als Literal in index.js');
+  // Die Zeile des Servers lautet: if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(raw))
+  const theirs = /if \(!(\/\^.*?\$\/)\.test\(raw\)\)/.exec(readFileSync(serverPath, 'utf8'));
+  assert.ok(theirs, 'die Zeit-Grammatik des Servers wurde nicht gefunden - Pattern geaendert?');
+  assert.equal(mine[1], theirs[1], 'Modul und Server pruefen Zeiten verschieden');
+});
