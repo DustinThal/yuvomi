@@ -45,6 +45,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   start or finish it there, using the same safety confirmation and timer controls as the journal.
   Existing dashboards keep it hidden until you add it from the dashboard editor. (#1180)
 
+- **Inventory tracked dates can now recur, keep a service history, and vehicles have an odometer.**
+  Give a tracked date (TÜV, boiler service, chimney sweep, extinguisher check, ...) a recurring
+  interval in months, and pressing "Done" rolls it forward instead of just clearing it - the
+  reminder moves with it. Every completion is kept in a new service-history view on the item,
+  alongside its linked maintenance bookings and documents with a running cost total, and a
+  vehicle's history now plots its odometer readings as a small trend chart. Vehicles can also
+  carry a manual odometer reading (km or mi) - a tracked date can add a distance interval as a
+  hint ("1,400 km to go") next to its date, though only the date itself ever produces a reminder.
+
 - **A reward can now say how many of it there are.** The catalog is shared by the whole household and
   had no idea of quantity, so a cinema evening and a wooden train were the same thing to it: both
   stayed open to every child at once, again and again, as long as the points lasted. A reward now
