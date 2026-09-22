@@ -271,3 +271,68 @@ test('ein erfolgreiches Speichern schliesst ohne Rueckfrage', () => {
   const unforced = calls.filter((args) => !/force:\s*true/.test(args));
   assert.deepEqual(unforced, [], `ohne force geschlossen: ${unforced.map((a) => `closeModal(${a})`).join(', ')}`);
 });
+
+/* ── Die Fachfarbe ───────────────────────────────────────────────────────────
+ *
+ * Die Farbe liegt als vierter Wert an der Plan-Zeile, weil ein Modul ohne
+ * eigenen Server nur ueber `/api/v1` schreiben kann (MODULES.md:123). Damit
+ * steht sie in einem Feld, das der Schichtplan zeigt - und `show_in_overlay`
+ * ist das eine Flag, das sowohl die Kalenderzeile
+ * (public/pages/schedule.js:1311) als auch der ICS-Feed
+ * (server/services/schedule-ics.js:46) lesen. Ohne die Regel unten stuende
+ * "#7c3aed" in jedem Termin und in jedem Abo.
+ */
+
+test('das Farbfeld haengt nie im Overlay', () => {
+  const source = read('index.js');
+  const hidden = /const HIDDEN_FROM_OVERLAY = new Set\(\[([^\]]*)\]\)/.exec(source);
+  assert.ok(hidden, 'HIDDEN_FROM_OVERLAY fehlt - wird die Farbe jetzt ueberall mitgezeigt?');
+  assert.match(hidden[1], /'color'/, `versteckt wird nur: ${hidden[1]}`);
+
+  // Und die Menge wird auch angewandt, statt nur dazustehen: die Rolle
+  // entscheidet, und bei allen anderen Rollen bleibt die Einstellung des
+  // Haushalts stehen (sonst waeren Fach, Raum und Lehrer aus jedem Termin weg).
+  const attach = /async function attachFieldsToPeriod\(period, fieldIds\)\s*\{([\s\S]*?)\n\}/.exec(source);
+  assert.ok(attach, 'attachFieldsToPeriod fehlt');
+  const body = attach[1];
+  assert.match(body, /HIDDEN_FROM_OVERLAY\.has\(role\)\s*\?\s*false/, 'die Rolle entscheidet nicht ueber show_in_overlay');
+  assert.match(body, /overlayFor\(field\.id, field\.show_in_overlay\)/,
+    'eine schon haengende Zuordnung wird neu gesetzt statt uebernommen');
+  assert.match(body, /overlayFor\(id, true\)/, 'ein neu angeheftetes Feld bekommt kein show_in_overlay');
+});
+
+test('die Farbe ist eine Rolle wie Fach und Raum', () => {
+  // Laeuft die Rolle auseinander, legt die Einrichtung ein zweites Feld an -
+  // und die Ansicht sucht eine Farbe, die in einem anderen Feld steht.
+  const roles = /export const FIELD_NAMES = Object\.freeze\(\{([\s\S]*?)\n\}\)/.exec(read('data.js'));
+  assert.ok(roles, 'FIELD_NAMES fehlt');
+  for (const role of ['subject', 'room', 'teacher', 'color']) {
+    assert.match(roles[1], new RegExp(`\\b${role}:`), `die Rolle ${role} fehlt in FIELD_NAMES`);
+  }
+});
+
+test('eine Farbe wird angeheftet, bevor sie geschrieben wird', () => {
+  // Ein Wert an einem Feld, das an der Stunde nicht haengt, laesst der Server
+  // die GANZE Zeile abweisen (server/routes/schedule.js:189) - und zwar die
+  // Zeilen aller Faecher, nicht nur die des einen. Deshalb erst anheften, dann
+  // schreiben.
+  const source = read('index.js');
+  const fn = /async function saveSubjectColor\(subject, rawColor\)\s*\{([\s\S]*?)\n\}/.exec(source);
+  assert.ok(fn, 'saveSubjectColor fehlt');
+  // Kommentare weg, bevor gesucht wird: eine auskommentierte Zeile ist keine
+  // Zusage, und `spreadSubjectColor` steht genau so in einem Kommentar daneben.
+  const body = fn[1].replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+  const attach = body.indexOf('attachFieldsToPeriod(');
+  const write = body.indexOf('saveDays(');
+  assert.ok(attach > -1, 'die Farbe wird geschrieben, ohne das Feld anzuhaeften');
+  assert.ok(write > -1, 'saveSubjectColor schreibt nicht ueber saveDays');
+  assert.ok(attach < write, 'angeheftet wird erst nach dem Schreiben');
+  // Geschrieben wird der ganze Satz, damit "Mathe ist ueberall blau" gilt und
+  // nicht nur in der Zelle, die gerade jemand angefasst hat - und geschrieben
+  // wird das, was `spreadSubjectColor` zurueckgegeben hat. Ein `saveDays([])`
+  // waere sonst ein Speichern, das den ganzen Plan raeumt.
+  assert.match(body, /const rows = spreadSubjectColor\(/, 'die Farbe wird nicht auf alle Zeilen des Fachs verteilt');
+  assert.match(body, /await saveDays\(rows\)/, 'geschrieben wird nicht der verteilte Satz');
+  // Und der Wert kommt durch die Grammatik, bevor er in eine CSS-Variable geht.
+  assert.match(body, /normalizeColor\(rawColor\)/, 'der Wert wird ungeprueft uebernommen');
+});

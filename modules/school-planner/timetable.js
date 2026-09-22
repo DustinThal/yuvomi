@@ -118,13 +118,19 @@ export function weekDateKeys(dateKey, weekStartsOn = 1) {
 /**
  * Farben fuer Faecher.
  *
- * Ein Fach hat keine eigene Farbe im Datenmodell - die Schichtart traegt sie,
- * und hier ist die Schichtart die *Stunde* (08:00-08:45), nicht das Fach. Waere
- * die Schichtart das Fach, koennte dasselbe Fach am Montag in der ersten und am
- * Dienstag in der dritten Stunde nicht stehen: eine Schichtart hat genau eine
- * Uhrzeit. Also faerbt diese Datei nach Fach, deterministisch aus dem Namen -
- * "Mathe" ist auf jedem Geraet und in jeder Sitzung dieselbe Farbe, ohne dass
- * irgendwo eine Zuordnung gespeichert werden muesste.
+ * Ein Fach hat keine eigene Spalte im Datenmodell - die Schichtart traegt die
+ * Farbe, und hier ist die Schichtart die *Stunde* (08:00-08:45), nicht das Fach.
+ * Waere die Schichtart das Fach, koennte dasselbe Fach am Montag in der ersten
+ * und am Dienstag in der dritten Stunde nicht stehen: eine Schichtart hat genau
+ * eine Uhrzeit.
+ *
+ * Diese Liste ist deshalb der RUECKFALL, nicht mehr die Antwort: eine gewaehlte
+ * Farbe liegt als Wert an der Plan-Zeile (Rolle `color`, siehe `FIELD_NAMES`)
+ * und gewinnt. Ohne sie rechnet diese Datei die Farbe deterministisch aus dem
+ * Namen - "Mathe" ist dann auf jedem Geraet und in jeder Sitzung dieselbe Farbe,
+ * ohne dass irgendwo eine Zuordnung gespeichert werden muesste. Das ist der
+ * Zustand, den ein Haushalt ohne gewaehlte Farben sieht, und der Grund, warum
+ * ein neues Fach sofort eine brauchbare Farbe hat statt einer grauen.
  *
  * Toene sind mittlere Saettigung: sie muessen vor hellem wie dunklem Grund
  * lesbar sein und als Block mit weisser bzw. dunkler Schrift funktionieren
@@ -165,6 +171,90 @@ export function subjectColor(subject) {
   return SUBJECT_COLORS[hash % SUBJECT_COLORS.length];
 }
 
+/**
+ * Eine gespeicherte Farbe in ihre Normalform bringen: `#rrggbb`, oder `''`.
+ *
+ * Das Feld, in dem eine gewaehlte Farbe liegt, ist im Schichtplan ein
+ * gewoehnliches Textfeld - dort kann jeder "blau" hineinschreiben. Ein
+ * ungepruefter Wert landet in `--lesson-color`, und der Browser wirft die
+ * Deklaration dann weg: der Block waere durchsichtig. Geprueft wird deshalb
+ * beim LESEN und nicht beim Schreiben - es gibt zwei Schreiber (diese Seite und
+ * der Schichtplan) und nur einen Leser.
+ *
+ * Die Normalform ist Kleinschreibung, weil das native `<input type="color">`
+ * genau die liefert; die Palette oben steht in Grossbuchstaben. Ohne eine
+ * gemeinsame Form waere "ist das die automatische Farbe?" nicht vergleichbar.
+ * `#abc` wird wie in CSS zu `#aabbcc` ergaenzt.
+ */
+export function normalizeColor(value) {
+  const match = /^#?(?:([0-9a-fA-F]{6})|([0-9a-fA-F]{3}))$/.exec(String(value ?? '').trim());
+  if (!match) return '';
+  const digits = match[1] ?? [...match[2]].map((char) => char + char).join('');
+  return `#${digits.toLowerCase()}`;
+}
+
+/**
+ * Die Faecher des Plans mit ihrer gespeicherten Farbe - die Grundlage des
+ * Farben-Panels.
+ *
+ * Reihenfolge des ersten Vorkommens; `color` ist `''`, solange niemand eine
+ * gewaehlt hat, und das Panel zeigt dann die aus dem Namen gerechnete. Verglichen
+ * wird ohne Gross/Klein und ohne Rand, damit "mathe" und "Mathe " nicht als zwei
+ * Faecher mit zwei Farben enden - derselbe Vergleich entscheidet in
+ * `spreadSubjectColor()` beim Schreiben, sonst faerbte ein Griff etwas anderes,
+ * als die Liste anzeigt.
+ *
+ * Die erste gefundene Farbe gewinnt. Alle Zeilen desselben Fachs tragen
+ * dieselbe, aber eine kann sie noch nicht haben - ein gerade erst getipptes
+ * Fach steht schon im Plan, bevor jemand seine Farbe gesetzt hat -, und dann
+ * entscheidet die naechste Zeile.
+ */
+export function subjectsInPlan(rows, { subjectFieldId, colorFieldId } = {}) {
+  if (subjectFieldId == null) return [];
+  const found = new Map();
+  for (const row of rows ?? []) {
+    const values = row?.field_values ?? {};
+    const subject = String(values[subjectFieldId] ?? values[String(subjectFieldId)] ?? '').trim();
+    if (!subject) continue;
+    const key = subject.toLocaleLowerCase();
+    const color = colorFieldId == null
+      ? ''
+      : normalizeColor(values[colorFieldId] ?? values[String(colorFieldId)]);
+    const entry = found.get(key);
+    if (!entry) found.set(key, { subject, color });
+    else if (!entry.color && color) entry.color = color;
+  }
+  return [...found.values()];
+}
+
+/**
+ * Eine gewaehlte Fachfarbe auf alle Zeilen desselben Fachs schreiben.
+ *
+ * Die Farbe liegt an der Zeile, gemeint ist aber das Fach: bekaeme nur die
+ * getippte Zelle sie, haette Mathe am Montag eine andere Farbe als am Dienstag.
+ * Ein Griff im Farben-Panel schreibt deshalb alle Zeilen mit diesem Fach um -
+ * und weil das Speichern ohnehin den vollstaendigen Satz schickt (`saveDays`),
+ * kostet das keinen zweiten Aufruf.
+ *
+ * `color: ''` heisst "wieder automatisch": der Server ueberspringt leere Werte,
+ * die Zeile verliert ihren Farbwert, und das Lesen faellt auf die aus dem Namen
+ * gerechnete Farbe zurueck.
+ *
+ * Gibt neue Zeilen zurueck und laesst die uebergebenen unberuehrt.
+ */
+export function spreadSubjectColor(rows, { subjectFieldId, colorFieldId, subject, color = '' } = {}) {
+  const list = rows ?? [];
+  if (subjectFieldId == null || colorFieldId == null) return list;
+  const wanted = String(subject ?? '').trim().toLocaleLowerCase();
+  if (!wanted) return list;
+  return list.map((row) => {
+    const values = row?.field_values ?? {};
+    const name = String(values[subjectFieldId] ?? values[String(subjectFieldId)] ?? '').trim();
+    if (name.toLocaleLowerCase() !== wanted) return row;
+    return { ...row, field_values: { ...values, [colorFieldId]: color } };
+  });
+}
+
 /** Relative Helligkeit nach WCAG, 0 (schwarz) bis 1 (weiss). */
 export function relativeLuminance(hex) {
   const value = String(hex ?? '').replace('#', '');
@@ -200,6 +290,22 @@ export function formatTimeRange(startTime, endTime) {
 }
 
 /**
+ * Die Farbe einer Stunde: die gewaehlte, sonst die gerechnete.
+ *
+ * Beide Einstiege benutzen sie, damit "Morgen" und "Woche" nie verschiedene
+ * Farben fuer dieselbe Stunde zeigen - die Kachel liest `lesson.color` aus
+ * genau diesen beiden Funktionen.
+ */
+function lessonColor(values, fieldIds, subject) {
+  const fieldId = fieldIds?.color;
+  if (fieldId != null) {
+    const stored = normalizeColor(values?.[fieldId] ?? values?.[String(fieldId)]);
+    if (stored) return stored;
+  }
+  return subjectColor(subject);
+}
+
+/**
  * Eine Stunde aus einem aufgeloesten Eintrag (`GET /schedule/entries`).
  *
  * Der Server liefert bereits alles, was eine Stunde ausmacht: Datum, die
@@ -232,7 +338,7 @@ export function lessonFromEntry(entry, fieldIds = {}) {
     note: entry.note ? String(entry.note) : '',
     isFree: entry.is_free === true || entry.is_free === 1,
     source: entry.source ?? 'pattern',
-    color: subjectColor(subject),
+    color: lessonColor(values, fieldIds, subject),
   };
 }
 
@@ -261,7 +367,7 @@ export function lessonFromPatternDay(row, typeById, fieldIds = {}) {
     note: '',
     isFree: row?.shift_type_id == null,
     source: 'pattern',
-    color: subjectColor(subject || periodName),
+    color: lessonColor(values, fieldIds, subject || periodName),
   };
 }
 

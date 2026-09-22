@@ -29,10 +29,11 @@ import { weekStartIndex } from '/utils/date.js';
 import { lessonFromEntry, sortLessons } from './timetable.js';
 
 /**
- * Die drei Felder, die dieses Modul anlegt und benutzt.
+ * Die vier Felder, die dieses Modul anlegt und benutzt.
  *
- * "Fach" ist das einzige, dessen Wert die Farbe bestimmt; ohne Fach zeigt der
- * Block den Namen der Stunde. Raum und Lehrer sind freiwillig.
+ * "Fach" ist der Wert, den die Ansichten zeigen; ohne Fach zeigt der Block den
+ * Namen der Stunde. Raum und Lehrer sind freiwillig, "Farbe" ist die einzige
+ * Ausnahme von der Regel unten - siehe gleich.
  *
  * Gefunden wird ueber den NAMEN, nicht ueber eine gespeicherte Id: eine Id in
  * `localStorage` gilt nur fuer das Geraet, auf dem sie geschrieben wurde, und
@@ -44,11 +45,23 @@ import { lessonFromEntry, sortLessons } from './timetable.js';
  * legt "Fach" an, und ein Haushalt mit englischer Oberflaeche findet beim
  * Wiedererkennen dasselbe Feld unter "Subject" wieder, statt ein zweites
  * danebenzustellen.
+ *
+ * "Farbe" hat mit den drei anderen nur den Ablageort gemeinsam. Ohne sie waere
+ * die Farbe eines Fachs aus seinem Namen gerechnet (`subjectColor`) und damit
+ * unveraenderlich - schoen fuer ein Modul ohne Speicher, aber niemand kann
+ * Mathe dann die Farbe geben, die er im Kopf hat. Sie liegt darum als Wert an
+ * der Plan-Zeile: der einzige Ort, an den ein Modul ohne eigenen Server
+ * schreiben darf (MODULES.md: "read and write through /api/v1"). Was das
+ * kostet, steht in der README - der Schichtplan zeigt den Wert als viertes
+ * Eingabefeld, weil er jedes Feld zeigt, das an einer Schichtart haengt.
+ * Deshalb haengt sie NICHT an `show_in_overlay`: sonst stuende "#7C3AED" in der
+ * Kalenderzeile und in jedem ICS-Eintrag.
  */
 export const FIELD_NAMES = Object.freeze({
   subject: ['Fach', 'Subject'],
   room: ['Raum', 'Room'],
   teacher: ['Lehrer', 'Teacher'],
+  color: ['Farbe', 'Colour', 'Color'],
 });
 
 export function normalizeName(value) {

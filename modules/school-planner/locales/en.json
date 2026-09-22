@@ -40,6 +40,11 @@
   "edit.noPeriods": "No period times yet",
   "edit.noPeriodsHint": "A timetable needs periods with a time. Create them in the shift planner or run this module's setup.",
 
+  "colors.heading": "Subject colours ({{count}})",
+  "colors.choose": "Colour for {{subject}}",
+  "colors.hint": "One colour covers every lesson of the same subject. With no choice of your own, a subject gets a colour worked out from its name - the same one on every device.",
+  "colors.failed": "The colour could not be saved",
+
   "times.edit": "Change the times of {{period}}",
   "times.start": "Start",
   "times.end": "End",

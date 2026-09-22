@@ -40,6 +40,11 @@
   "edit.noPeriods": "Keine Stundenzeiten vorhanden",
   "edit.noPeriodsHint": "Ein Plan braucht Stunden mit Uhrzeit. Lege sie im Schichtplan an oder nimm die Einrichtung dieses Moduls.",
 
+  "colors.heading": "Farben der Fächer ({{count}})",
+  "colors.choose": "Farbe für {{subject}}",
+  "colors.hint": "Eine Farbe gilt für alle Stunden desselben Fachs. Ohne eigene Wahl bekommt jedes Fach eine Farbe, die aus seinem Namen gerechnet ist - sie bleibt auf jedem Gerät dieselbe.",
+  "colors.failed": "Die Farbe konnte nicht gespeichert werden",
+
   "times.edit": "Zeiten von {{period}} ändern",
   "times.start": "Beginn",
   "times.end": "Ende",

@@ -80,7 +80,11 @@ import {
   lessonFromPatternDay,
   minutesOfTime,
   nextDateWithLessons,
+  normalizeColor,
   readableTextOn,
+  spreadSubjectColor,
+  subjectColor,
+  subjectsInPlan,
   weekDateKeys,
 } from './timetable.js';
 
@@ -455,32 +459,61 @@ async function ensurePeriods() {
 }
 
 /**
- * Die drei Felder an eine Stunde haengen.
+ * Rollen, deren Wert NICHT in die Kalender-Overlay-Zeile gehoert.
+ *
+ * Die Farbe ist ein Wert wie "Fach" auch, aber keine Angabe FUER den Termin:
+ * "#7C3AED" in der Kalenderzeile oder in einem ICS-Eintrag waere eine Zeichen-
+ * kette ohne Bedeutung fuer jeden, der den Termin liest. `show_in_overlay` ist
+ * genau der Schalter, den beide Stellen lesen (`public/pages/schedule.js:1311`
+ * fuer die Uebersichtszeile, `server/services/schedule-ics.js:46` fuer den
+ * Feed), also wird er fuer diese eine Rolle ausgeschaltet.
+ *
+ * Alles andere an der Farbe ist damit entschieden: der Kalender, der ICS-Feed
+ * und das Dashboard zeigen sie nicht. Sichtbar bleibt sie nur dort, wo der
+ * Schichtplan JEDES Feld einer Schichtart zeigt - in seinen Tageszeilen und im
+ * Detailblatt eines Eintrags. Das ist der Preis, den die README nennt.
+ */
+const HIDDEN_FROM_OVERLAY = new Set(['color']);
+
+/**
+ * Die Felder an eine Stunde haengen.
  *
  * `PUT /shift-types/{id}/fields` ERSETZT die Zuordnung, es ergaenzt sie nicht -
  * also wird der vorhandene Satz mitgeschickt. `show_in_overlay` kommt aus der
  * API als echter Boolean zurueck; ein `!== 0`-Vergleich wuerde `false` als
  * "nicht 0" lesen und die Einstellung des Haushalts still auf `true` drehen.
+ *
+ * Eine Rolle aus `HIDDEN_FROM_OVERLAY` wird auch dann korrigiert, wenn sie schon
+ * haengt: angeheftet wird im Schichtplan mit "im Kalender zeigen" als Vorgabe,
+ * und ein Feld, das dort jemand nachtraegt, soll die Farbe nicht in jeden
+ * Termin schreiben. Ohne diese Pruefung waere die Regel nur eine Absicht.
  */
 async function attachFieldsToPeriod(period, fieldIds) {
-  const wanted = Object.values(fieldIds).filter((id) => id != null);
+  const wanted = Object.entries(fieldIds).filter(([, id]) => id != null);
   if (!wanted.length) return;
   const existing = period.fields ?? [];
-  const missing = wanted.filter((id) => !existing.some((field) => Number(field.id) === Number(id)));
-  if (!missing.length) return;
-  const fields = [
-    ...existing.map((field, index) => ({
-      custom_field_id: field.id,
-      position: Number.isInteger(field.position) ? field.position : index,
-      show_in_overlay: Boolean(field.show_in_overlay),
-    })),
-    ...missing.map((id, index) => ({
+  const roleOf = (id) => wanted.find(([, wantedId]) => Number(wantedId) === Number(id))?.[0] ?? null;
+  const overlayFor = (id, current) => {
+    const role = roleOf(id);
+    return role && HIDDEN_FROM_OVERLAY.has(role) ? false : Boolean(current);
+  };
+
+  const kept = existing.map((field, index) => ({
+    custom_field_id: field.id,
+    position: Number.isInteger(field.position) ? field.position : index,
+    show_in_overlay: overlayFor(field.id, field.show_in_overlay),
+  }));
+  const missing = wanted
+    .filter(([, id]) => !existing.some((field) => Number(field.id) === Number(id)))
+    .map(([, id], index) => ({
       custom_field_id: id,
       position: existing.length + index,
-      show_in_overlay: true,
-    })),
-  ];
-  await api.put(`/schedule/shift-types/${encodeURIComponent(period.id)}/fields`, { fields });
+      show_in_overlay: overlayFor(id, true),
+    }));
+  const corrected = kept.some((row, index) => row.show_in_overlay !== Boolean(existing[index].show_in_overlay));
+  if (!missing.length && !corrected) return;
+
+  await api.put(`/schedule/shift-types/${encodeURIComponent(period.id)}/fields`, { fields: [...kept, ...missing] });
 }
 
 /**
@@ -805,7 +838,7 @@ function renderEdit() {
     <thead><tr><th scope="col" class="school-grid__corner"><span class="sr-only">${esc(t('extensions.school-planner.week.time'))}</span></th>${head}</tr></thead>
     <tbody>${body}</tbody>
   </table>
-</section>`;
+</section>${renderColors()}`;
 }
 
 /** Die Schichtarten, die als Unterrichtsstunde durchgehen: mit Uhrzeit, nach Zeit sortiert. */
@@ -911,6 +944,111 @@ async function writeCell(form, position, periodId, period, { clear = false } = {
     if (button) button.disabled = false;
     window.yuvomi?.showToast(error?.message || String(error), 'danger');
   }
+}
+
+/* ── Farben ───────────────────────────────────────────────────────────────── */
+
+/**
+ * Das Farben-Panel: eine Farbe je Fach.
+ *
+ * Es haengt an "Bearbeiten", weil eine Farbe zu waehlen ein Einrichten ist und
+ * kein Nachschlagen - und weil die Wochenansicht die Wirkung zeigt, aber keinen
+ * Griff dafuer hat.
+ *
+ * Zugeklappt, mit der Zahl im Titel: die Liste kann bei einem vollen Plan lang
+ * werden und steht unter einem Raster, das man liest.
+ *
+ * Ein Farbfeld je Fach und nicht je Zelle, obwohl der Wert an der Zelle liegt:
+ * gemeint ist immer das Fach. Eine Farbe je Zelle waere ein Regler, der beim
+ * naechsten Tippen wieder auf die gerechnete zurueckfaellt.
+ */
+function renderColors() {
+  const subjects = subjectsInPlan(state.patternDays, {
+    subjectFieldId: state.fieldIds.subject,
+    colorFieldId: state.fieldIds.color,
+  });
+  if (!subjects.length) return '';
+  const writable = canWrite();
+
+  const rows = subjects.map(({ subject, color }) => {
+    const current = color || subjectColor(subject);
+    // Das native Farbfeld ist der Regler, den der Schichtplan fuer dieselbe
+    // Angabe benutzt (`input.form-input--color`, public/pages/schedule.js:851).
+    // Es liefert immer `#rrggbb` - ein Wert, den `normalizeColor()` unveraendert
+    // durchlaesst.
+    const control = writable
+      ? `<input type="color" class="input form-input--color school-color__input"
+           data-subject-color="${esc(subject)}" value="${esc(current)}"
+           aria-label="${esc(t('extensions.school-planner.colors.choose', { subject }))}">`
+      : `<span class="school-color__chip" style="${lessonVars(current)}" aria-hidden="true"></span>`;
+    return `<li class="school-color">${control}<span class="school-color__name">${esc(subject)}</span></li>`;
+  }).join('');
+
+  return `<details class="school-panel school-colors" id="school-colors">
+  <summary class="school-colors__summary">${esc(t('extensions.school-planner.colors.heading', { count: subjects.length }))}</summary>
+  <p class="school-hint">${esc(t('extensions.school-planner.colors.hint'))}</p>
+  <ul class="school-colors__list">${rows}</ul>
+</details>`;
+}
+
+/**
+ * Das Panel nach dem Neuzeichnen wieder aufklappen.
+ *
+ * `renderShell()` ersetzt die Knoten, also ist ein aufgeklapptes `<details>`
+ * danach zu - und wer gerade eine Farbe gewaehlt hat, sieht seinen Regler sonst
+ * bei jedem Griff zuklappen.
+ */
+function keepColorsOpen() {
+  const panel = state.container?.querySelector('#school-colors');
+  if (panel) panel.open = true;
+}
+
+/**
+ * Eine Fachfarbe schreiben.
+ *
+ * Drei Schritte, und der erste ist der, den man vergisst: das Farbfeld muss an
+ * jeder betroffenen Stunde haengen. `validateFieldValues` weist JEDEN Feldwert
+ * ab, dessen Feld nicht an der Schichtart haengt - und zwar den ganzen Satz, es
+ * prueft Zeile fuer Zeile und bricht bei der ersten ab
+ * (`server/routes/schedule.js:189`). Fehlschlaege je Stunde werden geschluckt,
+ * wie in `attachFieldsToPeriods()`: eine fremde Stunde ohne Adminrecht laesst
+ * sich nicht aendern, und das darf die eigenen nicht mitreissen.
+ *
+ * `''` heisst "wieder automatisch": der Server ueberspringt leere Werte
+ * (`fieldValue()` liefert dafuer `null`, server/routes/schedule.js:157), die
+ * Zeile verliert ihren Farbwert, und die Ansicht faellt auf die aus dem Namen
+ * gerechnete Farbe zurueck. Ein "Zuruecksetzen" braucht deshalb keinen eigenen
+ * Knopf - es ist das Feld auf die gerechnete Farbe zu stellen.
+ */
+async function saveSubjectColor(subject, rawColor) {
+  const colorFieldId = state.fieldIds.color;
+  const subjectFieldId = state.fieldIds.subject;
+  if (colorFieldId == null || subjectFieldId == null) return;
+  const color = normalizeColor(rawColor);
+  const wanted = normalizeName(subject);
+
+  const typeById = new Map(state.shiftTypes.map((type) => [Number(type.id), type]));
+  const affected = new Set(plainDays()
+    .filter((row) => normalizeName(row.field_values?.[subjectFieldId]) === wanted)
+    .map((row) => Number(row.shift_type_id)));
+  for (const id of affected) {
+    const period = typeById.get(id);
+    if (!period) continue;
+    try {
+      await attachFieldsToPeriod(period, state.fieldIds);
+    } catch {
+      // Siehe oben: das Anheften an einer fremden Stunde darf die eigenen nicht
+      // verhindern. Scheitert es an ALLEN, meldet es der Schreibvorgang.
+    }
+  }
+
+  const rows = spreadSubjectColor(plainDays(), { subjectFieldId, colorFieldId, subject, color });
+  await saveDays(rows);
+  await reload();
+  if (state.signal?.aborted) return;
+  state.notice = '';
+  renderShell();
+  keepColorsOpen();
 }
 
 /* ── Seite ────────────────────────────────────────────────────────────────── */
@@ -1094,6 +1232,27 @@ export async function render(container, context = {}) {
   container.addEventListener('change', (event) => {
     const target = event.target;
     if (!(target instanceof Element)) return;
+
+    // `change` und nicht `input`: das native Farbfeld meldet sich bei jedem
+    // Schieben im Regler, `change` erst beim Schliessen. Geschrieben wird also
+    // einmal, wenn die Farbe feststeht, statt bei jedem Zwischenschritt.
+    //
+    // Kein Erfolgs-Toast: die Ansicht faerbt sich sichtbar um, das ist die
+    // Rueckmeldung. Eine Meldung "gespeichert" ueber einem Raster, das sich
+    // gerade geaendert hat, sagt dasselbe zweimal.
+    const colorInput = target.closest('[data-subject-color]');
+    if (colorInput) {
+      void saveSubjectColor(colorInput.dataset.subjectColor, colorInput.value).catch((error) => {
+        window.yuvomi?.showToast(t('extensions.school-planner.colors.failed'), 'danger');
+        console.warn('[school-planner] Farbe konnte nicht gespeichert werden:', error);
+        // Neuzeichnen stellt den Regler auf den Stand zurueck, der wirklich
+        // gespeichert ist - sonst zeigt er eine Farbe, die es nirgends gibt.
+        renderShell();
+        keepColorsOpen();
+      });
+      return;
+    }
+
     const pupil = target.closest('[data-action="pupil"]');
     if (!pupil) return;
     state.pupilId = Number(pupil.value);

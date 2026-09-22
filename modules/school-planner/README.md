@@ -44,7 +44,7 @@ finds again what is already there:
 | What | Where it comes from |
 | --- | --- |
 | Six periods 08:00-13:15 | Reused by short code (`P1`…) or name (`1. Stunde`), so the shift planner's school preset is adopted rather than duplicated |
-| Fields `Fach`, `Raum`, `Lehrer` | Reused by name; an English household finds `Subject`, `Room`, `Teacher` |
+| Fields `Fach`, `Raum`, `Lehrer`, `Farbe` | Reused by name; an English household finds `Subject`, `Room`, `Teacher`, `Colour` |
 | A 7-day pattern `Stundenplan <name>` | Anchored on this week's Monday |
 
 Times are not fixed here: they live on the period, so a school with a
@@ -61,6 +61,10 @@ card under *Schichtarten* in the shift planner. Both write the same row.
   from the subject. Week navigation, and today is marked.
 - **Bearbeiten** - the recurring grid. Tap a cell for subject, room and teacher,
   or tap a period's time to change when it starts and ends.
+- **Farben** - at the bottom of **Bearbeiten**, one colour per subject. Every
+  lesson of the same subject gets it: in the grid, in tomorrow's list and on the
+  tile. Without a choice, a subject keeps the colour computed from its name, so a
+  fresh install is coloured too and every device agrees.
 
 Clearing subject, room and teacher makes the period free: an empty cell is the
 absence of a row, not a row with an empty value.
@@ -70,6 +74,29 @@ belongs to the household but is changed by its creator or an admin
 (`ownTypeOrAdmin()` in `server/routes/schedule.js`), so the time is a button for
 those people and plain text for everyone else. Whoever ran **Einrichten** owns
 the six periods it created.
+
+### Where the colour is stored, and what it costs
+
+A chosen colour is a value of a fourth custom field, **Farbe**, on the lesson
+row. A module has no server and no database of its own, so `/api/v1` is the only
+place it may write at all ([MODULES.md](../../MODULES.md)) - and a field value is
+the only thing there that a household can read back.
+
+Two consequences, both deliberate:
+
+- The colour field is attached with `show_in_overlay: false`. The shift planner
+  renders **every** field attached to a period in its day rows, so `#0369A1` is
+  visible there and in an entry's detail sheet. It is *not* visible in the family
+  calendar or in an ICS subscription: both read that one flag
+  (`public/pages/schedule.js`, `server/services/schedule-ics.js`), and that is
+  what keeps the hex out of every event.
+- The value lives on the row but means per subject, so setting a colour rewrites
+  every row of that subject in a single write. "Mathematics is always blue" holds
+  everywhere, not only in the cell that was touched.
+
+If the field is later renamed or deleted in the shift planner, the module falls
+back to the computed colour instead of failing - the same happens if someone
+types something other than a colour into the field by hand.
 
 ## Where the data lives
 
@@ -81,20 +108,22 @@ Yuvomi's own shift planner through `/api/v1/schedule`:
 | A period (1st lesson, 08:00) | `schedule_shift_types` - has exactly one time |
 | A person's timetable | `schedule_patterns` with `cycle_length: 7` |
 | A lesson on a weekday | `schedule_pattern_days`, position `0` = the anchor day |
-| Subject, room, teacher | `schedule_custom_fields`, as per-row values |
+| Subject, room, teacher, colour | `schedule_custom_fields`, as per-row values |
 
 Two consequences worth knowing:
 
 1. **The subject is not the shift type, the period is.** A shift type carries
    exactly one time, so if "Mathematics" were the type, the same subject could
    not sit in period 1 on Monday and period 3 on Tuesday. The period carries the
-   time, the subject hangs off the row - and its colour is derived from the
-   subject name, so it is the same on every device without storing a mapping.
+   time, the subject hangs off the row - and its colour is either chosen (stored
+   on the row, see above) or computed from the subject name, so a household that
+   never opens the colour panel still gets the same colours on every device.
 2. **The timetable shows up in the shift planner, the family calendar and the
    ICS feed.** That is deliberate: it puts the timetable where a household
    actually looks. In the ICS feed the event title is the period
    (`P1 · 1. Stunde`) and the subject is in the description, because that is
-   where the shift planner puts custom field values.
+   where the shift planner puts custom field values. The colour is the one value
+   that stays out of both, and the paragraph above says how.
 
 A single day - a substitution, a trip, a cancelled lesson - is a shift planner
 *override* on that date, not an edit here. An override wins over the pattern,
@@ -104,9 +133,12 @@ and every week repeats from the pattern.
 
 - The weekday grid scrolls sideways on its own; the page never scrolls
   horizontally.
-- Colours are derived from the subject name (FNV-1a over a mid-tone palette) and
-  the text colour on a block is computed for contrast, not fixed - a yellow
-  subject gets dark text, a blue one light.
+- The colour of a subject is either chosen in **Farben** or computed from the
+  subject name (FNV-1a over a mid-tone palette). Either way the text colour on a
+  block is computed for contrast, not fixed - a yellow subject gets dark text, a
+  blue one light.
+- A value typed into the *Farbe* field in the shift planner is not trusted as
+  CSS: it has to be a hex colour to be used.
 - No dash is ever an em dash or en dash.
 - The composition mode is `full`, so the page header carries no measure
   (`PAGE-016` in `test/test-frontend-audit.js`).
@@ -123,12 +155,16 @@ does not exist in an upstream checkout, and a `test:` script pointing at a
 missing file would turn `npm test` red there.
 
 `timetable.test.js` covers the pure functions - cycle arithmetic against the
-server's own formula, date arithmetic across daylight saving, and the
-row/column building of the grid. `school-planner.test.js` covers the delivery
-promises: every used translation key present in both locales, the module accent
-in `theme.js` equal to the one in `module.json`, and every file the manifest
-names actually existing (a missing widget entry makes the whole module load as
-errored).
+server's own formula, date arithmetic across daylight saving, the row/column
+building of the grid, and the colour chain (the hex grammar, listing the subjects
+of a plan, spreading one colour over every row of a subject, and falling back to
+the computed colour when the stored value is missing or unusable).
+`school-planner.test.js` covers the delivery promises: every used translation key
+present in both locales, the module accent in `theme.js` equal to the one in
+`module.json`, every file the manifest names actually existing (a missing widget
+entry makes the whole module load as errored), and the two promises the colour
+rests on - that the colour field is attached outside the overlay, and that a
+colour is attached to the period before it is written.
 
 ## Layout
 

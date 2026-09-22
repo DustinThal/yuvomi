@@ -347,6 +347,59 @@
   width: 100%;
 }
 
+/* ── Das Farben-Panel ─────────────────────────────────────────────────────── */
+
+/* Ein eigener Abschnitt unter dem Raster, zugeklappt. Der Griff steht im
+ * <summary>, damit die Liste nicht unter einem Raster steht, das man liest -
+ * aber ohne eigenen Aufklapp-Knopf: das native <details> bringt Tastatur,
+ * Vorleseprogramm und den Marker mit. */
+.school-colors__summary {
+  cursor: pointer;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+}
+
+.school-colors__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: var(--space-2) var(--space-4);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.school-color {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+/* Die Breite kommt von hier, die Hoehe vom Kern (`.form-input--color`). */
+.school-color__input {
+  flex: 0 0 auto;
+  width: 3rem;
+}
+
+/* Dasselbe Feld ohne Schreibrecht: der Kern zeigt eine Farbe, die niemand
+ * aendern darf, als Flaeche - hier genauso, nur ohne Regler. */
+.school-color__chip {
+  flex: 0 0 auto;
+  width: 3rem;
+  height: 44px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border-control);
+  background-color: var(--lesson-color, var(--color-surface-3));
+}
+
+.school-color__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text-primary);
+}
+
 /* ── Kachel (Dashboard) ───────────────────────────────────────────────────── */
 
 /* Der Kopf der Kachel ist der des Kerns (`.widget__header`), nur die Zeilen

@@ -37,6 +37,9 @@ import {
   buildWeekGrid,
   nextDateWithLessons,
   nextLesson,
+  normalizeColor,
+  subjectsInPlan,
+  spreadSubjectColor,
 } from '../timetable.js';
 
 // 2026-01-05 ist ein Montag, 2026-09-21 ebenfalls - beide als Anker geeignet.
@@ -281,4 +284,114 @@ test('nextLesson findet die naechste anstehende Stunde', () => {
   assert.equal(nextLesson(lessons, 481).subject, 'Deutsch');
   assert.equal(nextLesson(lessons, 999), null, 'nach der letzten Stunde gibt es keine naechste');
   assert.equal(nextLesson([], 0), null);
+});
+
+/* ── Die gewaehlte Fachfarbe ────────────────────────────────────────────────
+ *
+ * Die Farbe liegt als Wert an der Plan-Zeile und wird im Schichtplan als
+ * gewoehnliches Textfeld angezeigt - dort kann jeder hineinschreiben, was er
+ * will. Diese vier Tests halten die Kette, die daraus wieder eine Farbe macht:
+ * pruefen, je Fach einmal auflisten, auf alle Zeilen des Fachs schreiben, und
+ * beim Lesen auf die gerechnete zurueckfallen.
+ */
+
+test('normalizeColor laesst nur Farben durch und normalisiert sie', () => {
+  // Was durchkommt, landet in `--lesson-color`. Ein ungepruefter Wert wirft die
+  // Deklaration weg - der Block waere durchsichtig.
+  assert.equal(normalizeColor('#7C3AED'), '#7c3aed', 'Grossschreibung wird zur Normalform');
+  assert.equal(normalizeColor('  #7c3aed  '), '#7c3aed', 'Rand wird abgeschnitten');
+  assert.equal(normalizeColor('7c3aed'), '#7c3aed', 'das # ist optional');
+  assert.equal(normalizeColor('#abc'), '#aabbcc', 'Kurzform wie in CSS');
+  assert.equal(normalizeColor('#ABC'), '#aabbcc');
+  for (const bad of ['', '   ', 'blau', 'red', '#12345', '#1234567', 'rgb(1,2,3)', 'var(--x)', null, undefined, 42, {}]) {
+    assert.equal(normalizeColor(bad), '', `"${String(bad)}" darf keine Farbe sein`);
+  }
+});
+
+test('eine gewaehlte Farbe gewinnt gegen die gerechnete', () => {
+  const fieldIds = { subject: 1, color: 2 };
+  const typeById = new Map([[7, { id: 7, name: '1. Stunde', start_time: '08:00', end_time: '08:45' }]]);
+  const row = { position: 0, shift_type_id: 7, field_values: { 1: 'Mathematik', 2: '#7c3aed' } };
+  assert.equal(lessonFromPatternDay(row, typeById, fieldIds).color, '#7c3aed');
+  // Ohne eigene Wahl bleibt es bei der gerechneten - und die ist stabil.
+  const plain = { position: 0, shift_type_id: 7, field_values: { 1: 'Mathematik' } };
+  assert.equal(lessonFromPatternDay(plain, typeById, fieldIds).color, subjectColor('Mathematik'));
+  // Ein Wert, den jemand im Schichtplan hineingetippt hat, faellt auf dieselbe
+  // zurueck, statt als kaputte Deklaration durchzukommen.
+  const junk = { position: 0, shift_type_id: 7, field_values: { 1: 'Mathematik', 2: 'blau' } };
+  assert.equal(lessonFromPatternDay(junk, typeById, fieldIds).color, subjectColor('Mathematik'));
+  // Und ohne die Rolle im Haushalt (Feld umbenannt) ebenfalls.
+  assert.equal(lessonFromPatternDay(row, typeById, { subject: 1 }).color, subjectColor('Mathematik'));
+});
+
+test('auch die aufgeloesten Eintraege tragen die gewaehlte Farbe', () => {
+  // "Morgen" und die Kachel lesen `lessonFromEntry` - zeigt nur einer der beiden
+  // Einstiege die gewaehlte Farbe, sieht dieselbe Stunde an zwei Stellen
+  // verschieden aus.
+  const entry = {
+    date_key: '2026-01-05',
+    shift_type: { id: 7, name: '1. Stunde', start_time: '08:00', end_time: '08:45' },
+    field_values: { 1: 'Mathematik', 2: '#0369A1' },
+    source: 'pattern',
+  };
+  assert.equal(lessonFromEntry(entry, { subject: 1, color: 2 }).color, '#0369a1');
+  assert.equal(lessonFromEntry(entry, { subject: 1 }).color, subjectColor('Mathematik'));
+});
+
+test('subjectsInPlan listet jedes Fach einmal und traegt seine Farbe', () => {
+  const rows = [
+    { field_values: { 1: 'Mathematik', 2: '#7c3aed' } },
+    { field_values: { 1: 'Sport' } },
+    { field_values: { 1: 'mathematik ' } },
+    { field_values: { 1: '  ' } },
+    { field_values: {} },
+    null,
+  ];
+  assert.deepEqual(subjectsInPlan(rows, { subjectFieldId: 1, colorFieldId: 2 }), [
+    { subject: 'Mathematik', color: '#7c3aed' },
+    { subject: 'Sport', color: '' },
+  ]);
+  // Die Farbe steht in der ERSTEN Zeile, die Zeile ohne Wert folgt: eine Zeile
+  // ohne Wert darf die Farbe des Fachs nicht auf '' zuruecksetzen. Gross
+  // geschrieben, weil der Regler des Kerns den Wert so liefern kann - die Liste
+  // geht in `value` eines <input type="color">, und das will Kleinbuchstaben.
+  const mixed = [
+    { field_values: { 1: 'Mathematik', 2: '#0369A1' } },
+    { field_values: { 1: 'Mathematik' } },
+  ];
+  assert.deepEqual(subjectsInPlan(mixed, { subjectFieldId: 1, colorFieldId: 2 }), [
+    { subject: 'Mathematik', color: '#0369a1' },
+  ]);
+  // Ohne Fach-Feld gibt es keine Liste - nicht eine Liste ohne Namen.
+  assert.deepEqual(subjectsInPlan(rows, {}), []);
+});
+
+test('spreadSubjectColor faerbt alle Zeilen des Fachs und keine andere', () => {
+  const rows = [
+    { position: 0, shift_type_id: 7, field_values: { 1: 'Mathematik' } },
+    { position: 1, shift_type_id: 8, field_values: { 1: 'mathematik', 2: '#000000' } },
+    { position: 2, shift_type_id: 7, field_values: { 1: 'Sport', 2: '#111111' } },
+    { position: 3, shift_type_id: 7, field_values: {} },
+  ];
+  const out = spreadSubjectColor(rows, { subjectFieldId: 1, colorFieldId: 2, subject: 'Mathematik', color: '#7c3aed' });
+  assert.equal(out[0].field_values[2], '#7c3aed', 'die Zeile ohne Wert bekommt die Farbe');
+  assert.equal(out[1].field_values[2], '#7c3aed', 'Gross/Klein entscheidet nicht mit');
+  assert.equal(out[2].field_values[2], '#111111', 'ein anderes Fach bleibt unberuehrt');
+  assert.equal(out[3].field_values[2], undefined, 'eine Zeile ohne Fach bleibt unberuehrt');
+  // Die uebergebenen Zeilen bleiben, wie sie waren: der Aufrufer holt sie aus
+  // dem Zustand und schickt gleich den ganzen Satz.
+  assert.equal(rows[0].field_values[2], undefined);
+  assert.notEqual(out[0], rows[0]);
+});
+
+test('spreadSubjectColor kann eine Farbe auch wieder wegnehmen', () => {
+  // `''` heisst "wieder automatisch": der Server ueberspringt leere Werte, die
+  // Zeile verliert ihren Farbwert, und die Ansicht rechnet wieder aus dem Namen.
+  const rows = [{ field_values: { 1: 'Mathematik', 2: '#7c3aed' } }];
+  const out = spreadSubjectColor(rows, { subjectFieldId: 1, colorFieldId: 2, subject: 'Mathematik', color: '' });
+  assert.equal(out[0].field_values[2], '');
+  // Ohne Ziel oder ohne Fach-ID passiert nichts, statt alles zu faerben.
+  assert.deepEqual(spreadSubjectColor(rows, { subjectFieldId: 1, subject: '' }), rows);
+  assert.deepEqual(spreadSubjectColor(rows, { subjectFieldId: 1, subject: 'Mathematik' }), rows);
+  assert.deepEqual(spreadSubjectColor(null, { subjectFieldId: 1, colorFieldId: 2, subject: 'Mathematik' }), []);
 });
