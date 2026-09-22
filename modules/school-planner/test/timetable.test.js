@@ -38,8 +38,10 @@ import {
   nextDateWithLessons,
   nextLesson,
   normalizeColor,
+  subjectColors,
   subjectsInPlan,
   spreadSubjectColor,
+  lessonsByDate,
   widgetRowBudget,
   widgetRowPlan,
 } from '../timetable.js';
@@ -396,6 +398,108 @@ test('spreadSubjectColor kann eine Farbe auch wieder wegnehmen', () => {
   assert.deepEqual(spreadSubjectColor(rows, { subjectFieldId: 1, subject: '' }), rows);
   assert.deepEqual(spreadSubjectColor(rows, { subjectFieldId: 1, subject: 'Mathematik' }), rows);
   assert.deepEqual(spreadSubjectColor(null, { subjectFieldId: 1, colorFieldId: 2, subject: 'Mathematik' }), []);
+});
+
+/* ── Die Farbe gehoert dem Fach, nicht der Zeile ──────────────────────────── */
+
+/* Der gemeldete Fehler: Musik am Montag rot gemacht, Musik am Donnerstag danach
+ * neu getippt - die neue Stunde kam in der gerechneten Farbe. Die Zeile, an der
+ * die Farbe haengt, wusste nichts von der zweiten, und die Ansicht fragte nur
+ * diese eine Zeile. Die Farbe wird jetzt aus ALLEN bekannten Zeilen je Fach
+ * aufgeloest. */
+
+test('subjectColors nimmt die erste gespeicherte Farbe je Fach', () => {
+  const rows = [
+    { field_values: { 1: 'Musik', 2: '#7c3aed' } },
+    { field_values: { 1: 'Mathematik', 2: '#0369A1' } },
+    { field_values: { 1: 'musik ' } },
+    { field_values: { 1: 'Sport' } },
+    { field_values: { 1: 'Musik', 2: '#000000' } },
+    { field_values: { 1: 'Kunst', 2: 'blau' } },
+    { field_values: {} },
+    null,
+  ];
+  const colors = subjectColors(rows, { subjectFieldId: 1, colorFieldId: 2 });
+  assert.equal(colors.get('musik'), '#7c3aed', 'Gross/Klein und Leerzeichen entscheiden nicht mit');
+  assert.equal(colors.get('mathematik'), '#0369a1');
+  assert.equal(colors.has('sport'), false, 'ohne Farbe kein Eintrag - der Rueckfall bleibt der Aufrufer');
+  assert.equal(colors.has('kunst'), false, 'ein unbrauchbarer Wert zaehlt nicht als Farbe');
+  assert.equal(colors.size, 2);
+  // Ohne eine der beiden Ids gibt es nichts aufzuloesen, statt alles zu faerben.
+  assert.equal(subjectColors(rows, { subjectFieldId: 1 }).size, 0);
+  assert.equal(subjectColors(rows, {}).size, 0);
+  assert.equal(subjectColors(null, { subjectFieldId: 1, colorFieldId: 2 }).size, 0);
+});
+
+test('eine spaeter getippte Stunde erbt die Farbe ihres Fachs', () => {
+  // Genau der gemeldete Fall: Montag Musik in Rot, Donnerstag Musik ohne
+  // eigenen Wert. Beide Tage muessen rot sein.
+  const entries = [
+    { date_key: '2026-01-05', shift_type: { id: 7, name: '3. Stunde', start_time: '10:00' }, field_values: { 1: 'Musik', 2: '#7c3aed' }, source: 'pattern' },
+    { date_key: '2026-01-08', shift_type: { id: 7, name: '3. Stunde', start_time: '10:00' }, field_values: { 1: 'Musik' }, source: 'pattern' },
+  ];
+  const byDate = lessonsByDate(entries, ['2026-01-05', '2026-01-08'], { subject: 1, color: 2 });
+  assert.equal(byDate.get('2026-01-05')[0].color, '#7c3aed');
+  assert.equal(byDate.get('2026-01-08')[0].color, '#7c3aed', 'die zweite Stunde desselben Fachs');
+  // Ein Fach ohne irgendwo gespeicherte Farbe bleibt bei der gerechneten - die
+  // Erbschaft darf nicht in eine einzige Farbe fuer alles ausarten.
+  const other = lessonsByDate(
+    [{ date_key: '2026-01-05', shift_type: { id: 7, start_time: '10:00' }, field_values: { 1: 'Sport' }, source: 'pattern' }],
+    ['2026-01-05'],
+    { subject: 1, color: 2 },
+  );
+  assert.equal(other.get('2026-01-05')[0].color, subjectColor('Sport'));
+});
+
+test('die eigene Zeile schlaegt die Farbe des Fachs', () => {
+  // Eine Vertretungsstunde darf anders aussehen als ihr Fach - sonst koennte
+  // man eine Abweichung nicht als solche faerben.
+  const entries = [
+    { date_key: '2026-01-05', shift_type: { id: 7, start_time: '10:00' }, field_values: { 1: 'Musik', 2: '#7c3aed' }, source: 'pattern' },
+    { date_key: '2026-01-08', shift_type: { id: 7, start_time: '10:00' }, field_values: { 1: 'Musik', 2: '#dc2626' }, source: 'pattern' },
+  ];
+  const byDate = lessonsByDate(entries, ['2026-01-05', '2026-01-08'], { subject: 1, color: 2 });
+  assert.equal(byDate.get('2026-01-05')[0].color, '#7c3aed');
+  assert.equal(byDate.get('2026-01-08')[0].color, '#dc2626');
+});
+
+test('ohne Vorrat sucht der Rueckfall unter den Zeilen, die der Aufruf sieht', () => {
+  // Der Rueckfall fragt ALLE Zeilen, die ihm gereicht wurden - auch die
+  // ausserhalb des gefragten Zeitraums. Fuer die Kachel ist das genau richtig:
+  // sie holt ihre Tage in einem Zug und findet so die Farbe eines Fachs, das an
+  // einem ihrer Tage noch ohne eigenen Wert steht.
+  const entries = [
+    { date_key: '2026-01-05', shift_type: { id: 7, start_time: '10:00' }, field_values: { 1: 'Musik', 2: '#7c3aed' }, source: 'pattern' },
+    { date_key: '2026-01-06', shift_type: { id: 7, start_time: '10:00' }, field_values: { 1: 'Musik' }, source: 'pattern' },
+  ];
+  const byDate = lessonsByDate(entries, ['2026-01-06'], { subject: 1, color: 2 });
+  assert.equal(byDate.get('2026-01-06')[0].color, '#7c3aed', 'der Montag steht mit im Rueckfall');
+  // Und was der Aufruf gar nicht sieht, kann er nicht wissen. Dafuer gibt es den
+  // Vorrat: die Seite kennt das ganze Muster, die Kachel nur ihre Antwort.
+  const only = lessonsByDate([entries[1]], ['2026-01-06'], { subject: 1, color: 2 });
+  assert.equal(only.get('2026-01-06')[0].color, subjectColor('Musik'),
+    'ohne die Montagszeile bleibt es bei der gerechneten Farbe');
+  const palette = subjectColors(entries, { subjectFieldId: 1, colorFieldId: 2 });
+  const withPalette = lessonsByDate([entries[1]], ['2026-01-06'], { subject: 1, color: 2 }, palette);
+  assert.equal(withPalette.get('2026-01-06')[0].color, '#7c3aed',
+    'mit dem Vorrat der Seite findet sie die Farbe trotzdem');
+});
+
+test('lessonsByDate ordnet nach Tag, laesst freie Tage weg und fuellt jeden Schluessel', () => {
+  const entries = [
+    { date_key: '2026-01-05', shift_type: { id: 8, start_time: '10:00' }, field_values: { 1: 'Sport' }, source: 'pattern' },
+    { date_key: '2026-01-05', shift_type: { id: 7, start_time: '08:00' }, field_values: { 1: 'Mathematik' }, source: 'pattern' },
+    { date_key: '2026-01-05', shift_type: { id: 9, start_time: null }, field_values: { 1: 'frei' }, source: 'override', is_free: true },
+    { date_key: '2026-01-06', shift_type: { id: 7, start_time: '08:00' }, field_values: { 1: 'Mathematik' }, source: 'pattern' },
+    { date_key: '2026-02-01', shift_type: { id: 7, start_time: '08:00' }, field_values: { 1: 'Mathematik' }, source: 'pattern' },
+  ];
+  const byDate = lessonsByDate(entries, ['2026-01-05', '2026-01-06', '2026-01-07'], { subject: 1 });
+  assert.deepEqual([...byDate.keys()], ['2026-01-05', '2026-01-06', '2026-01-07'],
+    'auch ein Tag ohne Unterricht hat einen Schluessel');
+  assert.deepEqual(byDate.get('2026-01-05').map((lesson) => lesson.subject), ['Mathematik', 'Sport']);
+  assert.equal(byDate.get('2026-01-05').length, 2, 'der freie Tag ist keine Stunde');
+  assert.deepEqual(byDate.get('2026-01-07'), []);
+  assert.equal(byDate.size, 3, 'was ausserhalb des Zeitraums liegt, kommt nicht mit');
 });
 
 /* ── Wie viel von einem Schultag auf die Kachel passt ─────────────────────── */

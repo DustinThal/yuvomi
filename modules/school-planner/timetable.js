@@ -194,6 +194,47 @@ export function normalizeColor(value) {
 }
 
 /**
+ * Der Schluessel, unter dem zwei Schreibweisen desselben Fachs zusammenfallen.
+ *
+ * Eine Stelle fuer den Vergleich, den sich `subjectsInPlan()`,
+ * `spreadSubjectColor()` und `subjectColors()` teilen muessen: "mathe" und
+ * "Mathe " sind ein Fach, und wenn eine der drei das anders sieht, faerbt ein
+ * Griff etwas anderes, als die Liste anzeigt.
+ */
+function subjectKey(subject) {
+  return String(subject ?? '').trim().toLocaleLowerCase();
+}
+
+/**
+ * Die gewaehlte Farbe je Fach - gesucht in allen Zeilen, die der Leser kennt.
+ *
+ * Eine Farbe liegt an der Zeile, gemeint ist aber das Fach. Wer nur die eine
+ * Zeile fragt, die gerade gezeichnet wird, gibt jeder Stunde, die nach der Wahl
+ * getippt wurde, die aus dem Namen gerechnete Farbe - zwei Stunden desselben
+ * Fachs saehen dann verschieden aus, obwohl das Panel das Fach nur einmal
+ * listet. Deshalb wird der Vorrat einmal ueber alle bekannten Zeilen gebildet
+ * und beim Lesen nachgeschlagen.
+ *
+ * Die erste gespeicherte Farbe eines Fachs gewinnt; ein Fach ohne gespeicherte
+ * Farbe steht gar nicht in der Karte, und der Leser faellt auf die gerechnete
+ * zurueck.
+ */
+export function subjectColors(rows, { subjectFieldId, colorFieldId } = {}) {
+  const found = new Map();
+  if (subjectFieldId == null || colorFieldId == null) return found;
+  for (const row of rows ?? []) {
+    const values = row?.field_values ?? {};
+    const subject = String(values[subjectFieldId] ?? values[String(subjectFieldId)] ?? '').trim();
+    if (!subject) continue;
+    const key = subjectKey(subject);
+    if (found.has(key)) continue;
+    const color = normalizeColor(values[colorFieldId] ?? values[String(colorFieldId)]);
+    if (color) found.set(key, color);
+  }
+  return found;
+}
+
+/**
  * Die Faecher des Plans mit ihrer gespeicherten Farbe - die Grundlage des
  * Farben-Panels.
  *
@@ -211,18 +252,14 @@ export function normalizeColor(value) {
  */
 export function subjectsInPlan(rows, { subjectFieldId, colorFieldId } = {}) {
   if (subjectFieldId == null) return [];
+  const colors = subjectColors(rows, { subjectFieldId, colorFieldId });
   const found = new Map();
   for (const row of rows ?? []) {
     const values = row?.field_values ?? {};
     const subject = String(values[subjectFieldId] ?? values[String(subjectFieldId)] ?? '').trim();
     if (!subject) continue;
-    const key = subject.toLocaleLowerCase();
-    const color = colorFieldId == null
-      ? ''
-      : normalizeColor(values[colorFieldId] ?? values[String(colorFieldId)]);
-    const entry = found.get(key);
-    if (!entry) found.set(key, { subject, color });
-    else if (!entry.color && color) entry.color = color;
+    const key = subjectKey(subject);
+    if (!found.has(key)) found.set(key, { subject, color: colors.get(key) ?? '' });
   }
   return [...found.values()];
 }
@@ -245,12 +282,12 @@ export function subjectsInPlan(rows, { subjectFieldId, colorFieldId } = {}) {
 export function spreadSubjectColor(rows, { subjectFieldId, colorFieldId, subject, color = '' } = {}) {
   const list = rows ?? [];
   if (subjectFieldId == null || colorFieldId == null) return list;
-  const wanted = String(subject ?? '').trim().toLocaleLowerCase();
+  const wanted = subjectKey(subject);
   if (!wanted) return list;
   return list.map((row) => {
     const values = row?.field_values ?? {};
     const name = String(values[subjectFieldId] ?? values[String(subjectFieldId)] ?? '').trim();
-    if (name.toLocaleLowerCase() !== wanted) return row;
+    if (subjectKey(name) !== wanted) return row;
     return { ...row, field_values: { ...values, [colorFieldId]: color } };
   });
 }
@@ -295,13 +332,22 @@ export function formatTimeRange(startTime, endTime) {
  * Beide Einstiege benutzen sie, damit "Morgen" und "Woche" nie verschiedene
  * Farben fuer dieselbe Stunde zeigen - die Kachel liest `lesson.color` aus
  * genau diesen beiden Funktionen.
+ *
+ * Drei Stufen, und die mittlere ist die, die man vergisst: die Farbe der Zeile,
+ * dann die des Fachs aus dem Vorrat aller bekannten Zeilen (`subjectColors()`),
+ * dann die aus dem Namen gerechnete. Ohne die mittlere Stufe bekaeme jede
+ * Stunde, die nach der Farbwahl getippt wurde, eine andere Farbe als ihre
+ * Geschwister im selben Fach - die Farbe liegt an der Zeile, gemeint ist aber
+ * das Fach.
  */
-function lessonColor(values, fieldIds, subject) {
+function lessonColor(values, fieldIds, subject, colors) {
   const fieldId = fieldIds?.color;
   if (fieldId != null) {
     const stored = normalizeColor(values?.[fieldId] ?? values?.[String(fieldId)]);
     if (stored) return stored;
   }
+  const shared = colors?.get?.(subjectKey(subject));
+  if (shared) return shared;
   return subjectColor(subject);
 }
 
@@ -311,8 +357,11 @@ function lessonColor(values, fieldIds, subject) {
  * Der Server liefert bereits alles, was eine Stunde ausmacht: Datum, die
  * eingebettete Schichtart mit ihren Zeiten und die Feldwerte. Diese Funktion
  * uebersetzt nur die Namen der Felder in die Rollen, die der Stundenplan kennt.
+ *
+ * `colors` ist der Vorrat aus `subjectColors()` - die Farbe des Fachs, wenn die
+ * Zeile selbst keine traegt (siehe `lessonColor()`).
  */
-export function lessonFromEntry(entry, fieldIds = {}) {
+export function lessonFromEntry(entry, fieldIds = {}, colors = null) {
   if (!entry) return null;
   const type = entry.shift_type ?? null;
   const values = entry.field_values ?? {};
@@ -338,12 +387,18 @@ export function lessonFromEntry(entry, fieldIds = {}) {
     note: entry.note ? String(entry.note) : '',
     isFree: entry.is_free === true || entry.is_free === 1,
     source: entry.source ?? 'pattern',
-    color: lessonColor(values, fieldIds, subject),
+    color: lessonColor(values, fieldIds, subject, colors),
   };
 }
 
-/** Eine Stunde aus einer Zeile von `GET /schedule/patterns/{id}/days`. */
-export function lessonFromPatternDay(row, typeById, fieldIds = {}) {
+/**
+ * Eine Stunde aus einer Zeile von `GET /schedule/patterns/{id}/days`.
+ *
+ * `colors` ist derselbe Vorrat wie in `lessonFromEntry()`: in der
+ * Bearbeiten-Ansicht kommen die Zeilen aus dem Muster und nicht aus den
+ * Eintraegen, und die Farbe des Fachs steht dort an einer anderen Zeile.
+ */
+export function lessonFromPatternDay(row, typeById, fieldIds = {}, colors = null) {
   const type = typeById?.get?.(row?.shift_type_id) ?? typeById?.[row?.shift_type_id] ?? null;
   const values = row?.field_values ?? {};
   const pick = (role) => {
@@ -367,7 +422,7 @@ export function lessonFromPatternDay(row, typeById, fieldIds = {}) {
     note: '',
     isFree: row?.shift_type_id == null,
     source: 'pattern',
-    color: lessonColor(values, fieldIds, subject || periodName),
+    color: lessonColor(values, fieldIds, subject || periodName, colors),
   };
 }
 
@@ -396,6 +451,37 @@ function compareSubject(a, b) {
 }
 
 /**
+ * Eintraege nach Datum, fertig uebersetzt und sortiert.
+ *
+ * Freie Tage fallen heraus: sie sind die Abwesenheit von Unterricht und haben
+ * in einer Liste von Stunden nichts zu suchen.
+ *
+ * `colors` ist der Vorrat aus `subjectColors()`. Ohne eigenen entscheidet der,
+ * den dieser Aufruf sieht: die Farbe eines Fachs steht an einer Zeile, gemeint
+ * ist das Fach, und eine gerade erst getippte Stunde desselben Fachs traegt
+ * keine eigene. Wer mehr Zeilen kennt als dieser Aufruf - die Seite kennt das
+ * ganze Muster -, gibt seinen Vorrat mit, damit die Reichweite der Ansicht
+ * nicht ueber die Farbe entscheidet.
+ */
+export function lessonsByDate(entries, dateKeys, fieldIds, colors = null) {
+  const wanted = new Set(dateKeys ?? []);
+  const palette = colors ?? subjectColors(entries, {
+    subjectFieldId: fieldIds?.subject,
+    colorFieldId: fieldIds?.color,
+  });
+  const map = new Map();
+  for (const dateKey of dateKeys ?? []) map.set(dateKey, []);
+  for (const entry of entries ?? []) {
+    if (!wanted.has(entry.date_key)) continue;
+    const lesson = lessonFromEntry(entry, fieldIds, palette);
+    if (!lesson || lesson.isFree) continue;
+    map.get(entry.date_key).push(lesson);
+  }
+  for (const [key, lessons] of map) map.set(key, sortLessons(lessons));
+  return map;
+}
+
+/**
  * Das Wochenraster: Zeilen sind Stunden (nach Uhrzeit), Spalten sind Wochentage.
  *
  * Die Zeilen kommen aus den *vorhandenen* Stunden und nicht aus einer festen
@@ -403,10 +489,10 @@ function compareSubject(a, b) {
  * Zeilen, und eine mit Blockunterricht verliert die neunte Stunde. Zwei
  * Schichtarten mit derselben Uhrzeit werden zu einer Zeile.
  */
-export function buildWeekGrid(lessonsByDate, dateKeys) {
+export function buildWeekGrid(byDate, dateKeys) {
   const rows = new Map();
   for (const dateKey of dateKeys ?? []) {
-    for (const lesson of lessonsByDate?.get?.(dateKey) ?? []) {
+    for (const lesson of byDate?.get?.(dateKey) ?? []) {
       const key = `${lesson.startTime ?? ''}|${lesson.endTime ?? ''}`;
       if (!rows.has(key)) {
         rows.set(key, { key, startTime: lesson.startTime ?? '', endTime: lesson.endTime ?? '', cells: new Map() });

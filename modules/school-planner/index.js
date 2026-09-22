@@ -84,6 +84,7 @@ import {
   readableTextOn,
   spreadSubjectColor,
   subjectColor,
+  subjectColors,
   subjectsInPlan,
   weekDateKeys,
 } from './timetable.js';
@@ -241,9 +242,26 @@ async function loadEntries(from, to) {
   state.entries = await fetchEntries({ userId: state.pupilId, from, to });
 }
 
-/** Die Stunden des geladenen Zeitraums, nach Datum - die Uebersetzung steht in `data.js`. */
+/**
+ * Die Stunden des geladenen Zeitraums, nach Datum - die Uebersetzung steht in
+ * `data.js`.
+ *
+ * Die Farbkarte kommt aus dem Muster UND den Eintraegen, nicht aus dem
+ * Zeitraum, den diese Ansicht zeigt: eine Farbe gilt fuer das Fach, und ob die
+ * Zeile, an der sie steht, gerade auf dem Bildschirm ist, darf nicht
+ * entscheiden, ob sie gefunden wird. Das Muster kennt alle sieben Tage - die
+ * Wochenansicht kennt eine Woche.
+ */
 function lessonsOfPeriod(dateKeys) {
-  return lessonsByDate(state.entries, dateKeys, state.fieldIds);
+  return lessonsByDate(state.entries, dateKeys, state.fieldIds, subjectPalette());
+}
+
+/** Die gewaehlten Farben aller bekannten Zeilen - siehe `subjectColors()`. */
+function subjectPalette() {
+  return subjectColors([...state.patternDays, ...state.entries], {
+    subjectFieldId: state.fieldIds.subject,
+    colorFieldId: state.fieldIds.color,
+  });
 }
 
 /* ── Schreiben ────────────────────────────────────────────────────────────── */
@@ -793,6 +811,10 @@ function renderEdit() {
 
   const anchor = state.pattern.anchor_date;
   const typeById = new Map(state.shiftTypes.map((type) => [Number(type.id), type]));
+  // Hier kommen die Zeilen aus dem Muster: die Farbe eines Fachs steht an einer
+  // anderen Zeile als der, die gerade gezeichnet wird, und ohne den Vorrat
+  // faerbte das Raster eine neu getippte Stunde mit der gerechneten.
+  const palette = subjectPalette();
 
   const head = Array.from({ length: 7 }, (_, position) => `<th scope="col" class="school-grid__head">
       <span class="school-grid__dow">${esc(weekdayLabel(addDays(anchor, position)))}</span>
@@ -802,7 +824,7 @@ function renderEdit() {
     const cells = Array.from({ length: 7 }, (_, position) => {
       const row = state.patternDays.find((candidate) => Number(candidate.position) === position
         && Number(candidate.shift_type_id) === Number(period.id));
-      const lesson = row ? lessonFromPatternDay(row, typeById, state.fieldIds) : null;
+      const lesson = row ? lessonFromPatternDay(row, typeById, state.fieldIds, palette) : null;
       const hasSubject = Boolean(lesson && lesson.subject && lesson.subject !== lesson.periodName);
       const label = hasSubject
         ? `<span class="school-slot__subject">${esc(lesson.subject)}</span>`
@@ -920,6 +942,16 @@ async function writeCell(form, position, periodId, period, { clear = false } = {
     if (!clear && state.fieldIds.subject != null && read('subject')) values[state.fieldIds.subject] = read('subject');
     if (!clear && state.fieldIds.room != null && read('room')) values[state.fieldIds.room] = read('room');
     if (!clear && state.fieldIds.teacher != null && read('teacher')) values[state.fieldIds.teacher] = read('teacher');
+
+    // Die Farbe des Fachs zieht mit. Sie liegt an der Zeile, gemeint ist aber
+    // das Fach: ohne diese Zeilen haette eine neu getippte Stunde desselben
+    // Fachs keine eigene Farbe mehr - und weil das Lesen die Zeile zuerst
+    // fragt, saehe sie anders aus als ihre Geschwister. Zugleich ist das der
+    // Weg, auf dem eine vorhandene Farbe das Umschreiben der Zelle ueberlebt:
+    // die Zeile wird ersetzt, nicht ergaenzt.
+    // Nur eine vorhandene zieht mit: hier wird keine Farbe erfunden.
+    const shared = subjectPalette().get(normalizeName(read('subject')));
+    if (!clear && shared && state.fieldIds.color != null) values[state.fieldIds.color] = shared;
 
     const kept = plainDays().filter((day) => !(day.position === position && day.shift_type_id === periodId));
     // Kein Fach, kein Raum, kein Lehrer heisst: die Stunde faellt aus. Die Zeile

@@ -26,7 +26,6 @@
 
 import { api } from '/api.js';
 import { weekStartIndex } from '/utils/date.js';
-import { lessonFromEntry, sortLessons } from './timetable.js';
 
 /**
  * Die vier Felder, die dieses Modul anlegt und benutzt.
@@ -191,22 +190,8 @@ export async function fetchEntries({ userId, from, to }) {
   return response.data?.entries ?? [];
 }
 
-/**
- * Eintraege nach Datum, fertig uebersetzt und sortiert.
- *
- * Freie Tage fallen heraus: sie sind die Abwesenheit von Unterricht und haben
- * in einer Liste von Stunden nichts zu suchen.
- */
-export function lessonsByDate(entries, dateKeys, fieldIds) {
-  const wanted = new Set(dateKeys);
-  const map = new Map();
-  for (const dateKey of dateKeys) map.set(dateKey, []);
-  for (const entry of entries ?? []) {
-    if (!wanted.has(entry.date_key)) continue;
-    const lesson = lessonFromEntry(entry, fieldIds);
-    if (!lesson || lesson.isFree) continue;
-    map.get(entry.date_key).push(lesson);
-  }
-  for (const [key, lessons] of map) map.set(key, sortLessons(lessons));
-  return map;
-}
+// `lessonsByDate()` steht in `timetable.js`: sie rechnet nur und liest nichts,
+// und dort ist sie ohne Browser pruefbar - genau der Weg, auf dem eine Stunde
+// ihre Farbe findet, hatte hier keine Pruefung. Weitergereicht wird sie trotzdem,
+// damit Seite und Kachel weiterhin nur eine Abhaengigkeit haben.
+export { lessonsByDate } from './timetable.js';

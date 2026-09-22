@@ -113,6 +113,25 @@ Two consequences, both deliberate:
   every row of that subject in a single write. "Mathematics is always blue" holds
   everywhere, not only in the cell that was touched.
 
+A colour chosen today also has to reach a lesson typed tomorrow, and that is the
+harder half. The value is stored on the row, but the row for next Thursday does
+not exist yet when the colour is picked - and when it is typed, nobody picks the
+colour again. Nothing on that row says "blue". So the colour is resolved per
+subject rather than per row, from every row the reader knows:
+
+1. the value on the row itself, if it has one - a substitution may be coloured
+   differently from its subject, and that has to stay possible;
+2. otherwise the first colour found for that subject across the whole plan
+   (`subjectColors()`), compared case- and whitespace-insensitively, the same way
+   the colour panel groups subjects;
+3. otherwise the colour computed from the subject name.
+
+The page hands in a palette built from the pattern *and* the loaded entries, so
+the answer does not depend on which week happens to be on screen; the tile builds
+its own from the entries it fetched. Typing a lesson also carries the known
+colour of that subject onto the new row, so the stored plan stays consistent and
+editing a cell does not silently drop its colour.
+
 The field is created when it is first needed. **Einrichten** creates it with the
 other three, but a household that set the module up before the colour existed
 (1.1.0) has no `Farbe` field - and setup is not offered a second time once a plan
@@ -190,19 +209,20 @@ missing file would turn `npm test` red there.
 `timetable.test.js` covers the pure functions - cycle arithmetic against the
 server's own formula, date arithmetic across daylight saving, the row/column
 building of the grid, the colour chain (the hex grammar, listing the subjects of
-a plan, spreading one colour over every row of a subject, and falling back to the
-computed colour when the stored value is missing or unusable), and how much of a
-school day the dashboard tile carries.
+a plan, spreading one colour over every row of a subject, resolving a lesson's
+colour in its three stages, and falling back to the computed colour when the
+stored value is missing or unusable), and how much of a school day the dashboard
+tile carries.
 `school-planner.test.js` covers the delivery promises: every used translation key
 present in both locales, the module accent in `theme.js` equal to the one in
 `module.json`, every file the manifest names actually existing (a missing widget
-entry makes the whole module load as errored), the three promises the colour rests
+entry makes the whole module load as errored), the four promises the colour rests
 on - that the colour field is attached outside the overlay, that a colour is
-attached to the period before it is written, and that a missing colour field is
-created rather than quietly skipped - and the tile's arithmetic, which is
-compared against the core's own grid (`grid-auto-rows` in `dashboard.css`,
-`--space-5` in `tokens.css`) so the estimate cannot drift away from the layout it
-describes.
+attached to the period before it is written, that a missing colour field is
+created rather than quietly skipped, and that the palette reaches the rendering
+and the writing side alike - and the tile's arithmetic, which is compared against
+the core's own grid (`grid-auto-rows` in `dashboard.css`, `--space-5` in
+`tokens.css`) so the estimate cannot drift away from the layout it describes.
 
 
 ## Layout

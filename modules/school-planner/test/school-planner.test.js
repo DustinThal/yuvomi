@@ -364,6 +364,41 @@ test('eine gewaehlte Farbe legt ihr Feld an, statt still nichts zu tun', () => {
     'der stille Ausstieg ist zurueck');
 });
 
+test('die Ansicht reicht ihren Farbvorrat an die Stunden weiter', () => {
+  // Die Farbe eines Fachs steht an einer Zeile, die gerade nicht auf dem
+  // Bildschirm sein muss. Ohne den Vorrat faellt `lessonsByDate()` auf die
+  // Zeilen zurueck, die es selbst sieht - eine Stunde desselben Fachs haette
+  // dann je nach Woche eine andere Farbe.
+  const fn = /function lessonsOfPeriod\(dateKeys\)\s*\{([\s\S]*?)\n\}/.exec(read('index.js'));
+  assert.ok(fn, 'lessonsOfPeriod fehlt');
+  assert.match(fn[1], /subjectPalette\(\)/,
+    'die Seite gibt ihren Vorrat nicht weiter und faerbt nur, was sie gerade sieht');
+  // Und der Vorrat kennt Muster UND Eintraege: das Muster hat alle sieben Tage,
+  // die geladenen Eintraege haben die Abweichungen.
+  const palette = /function subjectPalette\(\)\s*\{([\s\S]*?)\n\}/.exec(read('index.js'));
+  assert.ok(palette, 'subjectPalette fehlt');
+  assert.match(palette[1], /state\.patternDays/, 'das Muster fehlt im Vorrat');
+  assert.match(palette[1], /state\.entries/, 'die aufgeloesten Eintraege fehlen im Vorrat');
+});
+
+test('eine getippte Stunde nimmt die Farbe ihres Fachs mit', () => {
+  // Sonst bekommt genau die Stunde, die der Anlass des Tippens war, keine
+  // eigene Farbe - und weil das Lesen die Zeile zuerst fragt, saehe sie anders
+  // aus als ihre Geschwister im selben Fach. Zugleich ist das der Weg, auf dem
+  // eine vorhandene Farbe das Ueberschreiben der Zelle ueberlebt.
+  const fn = /async function writeCell\(form, position, periodId, period, \{ clear = false \} = \{\}\)\s*\{([\s\S]*?)\n\}/.exec(read('index.js'));
+  assert.ok(fn, 'writeCell fehlt');
+  const body = fn[1].replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+  assert.match(body, /subjectPalette\(\)\.get\(normalizeName\(read\('subject'\)\)\)/,
+    'die Farbe des Fachs wird beim Schreiben nicht nachgeschlagen');
+  assert.match(body, /values\[state\.fieldIds\.color\] = shared/,
+    'die nachgeschlagene Farbe landet nicht in der Zeile');
+  // Nur eine VORHANDENE zieht mit: hier wird keine Farbe erfunden und nichts
+  // ueberschrieben, was jemand ausdruecklich anders gesetzt hat.
+  assert.match(body, /!clear && shared && state\.fieldIds\.color != null/,
+    'die Farbe zieht auch ins Leeren mit');
+});
+
 test('das Panel sagt das neue Feld vorher an', () => {
   // Ein Feld, das im Schichtplan auftaucht, ohne dass es jemand bestellt hat,
   // will erklaert sein - und zwar bevor die Farbe gewaehlt wird, nicht danach.
