@@ -337,6 +337,51 @@ test('eine Farbe wird angeheftet, bevor sie geschrieben wird', () => {
   assert.match(body, /normalizeColor\(rawColor\)/, 'der Wert wird ungeprueft uebernommen');
 });
 
+test('eine gewaehlte Farbe legt ihr Feld an, statt still nichts zu tun', () => {
+  // Der gemeldete Fehler: "changed color is not saved". Die Farbe kam nach der
+  // Einrichtung dazu (1.1.0), und wer davor eingerichtet hat, hat kein Feld
+  // `Farbe` - durch die Einrichtung kommt er aber nicht mehr, weil Muster und
+  // Felder da sind (`needsSetup()`). Die Auswahl lief deshalb in ein stilles
+  // `return`: nichts geschrieben, kein Hinweis, und der Regler stand beim
+  // naechsten Zeichnen wieder auf der gerechneten Farbe.
+  const fn = /async function saveSubjectColor\(subject, rawColor\)\s*\{([\s\S]*?)\n\}/.exec(read('index.js'));
+  assert.ok(fn, 'saveSubjectColor fehlt');
+  const body = fn[1].replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+
+  // Angelegt wird VOR dem Lesen der Kennung - sonst liest die Funktion genau
+  // den Zustand, der sie vorher hat aufgeben lassen.
+  const ensure = body.indexOf('await ensureFields()');
+  const readIds = body.indexOf('state.fieldIds.color');
+  assert.ok(ensure > -1, 'die Farbe wird gewaehlt, ohne das Feld anzulegen');
+  assert.ok(readIds > -1, 'saveSubjectColor liest die Farbkennung nicht mehr');
+  assert.ok(ensure < readIds, 'das Feld wird erst nach dem Lesen der Kennung angelegt');
+
+  // Und wenn es danach immer noch keine Kennung gibt, wird das gesagt und nicht
+  // verschwiegen: der Aufrufer zeigt den Fehler an, das stille `return` nicht.
+  assert.match(body, /\|\| subjectFieldId == null\)\s*\{\s*throw new Error\(/,
+    'ohne Feldkennung bricht das Speichern wieder lautlos ab');
+  assert.doesNotMatch(body, /\|\| subjectFieldId == null\)\s*return/,
+    'der stille Ausstieg ist zurueck');
+});
+
+test('das Panel sagt das neue Feld vorher an', () => {
+  // Ein Feld, das im Schichtplan auftaucht, ohne dass es jemand bestellt hat,
+  // will erklaert sein - und zwar bevor die Farbe gewaehlt wird, nicht danach.
+  const source = read('index.js');
+  const fn = /function renderColors\(\)\s*\{([\s\S]*?)\n\}/.exec(source);
+  assert.ok(fn, 'renderColors fehlt');
+  const body = fn[1].replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+  assert.match(body, /state\.fieldIds\.color == null[\s\S]*?colors\.newField/,
+    'das Panel erklaert das noch fehlende Farbfeld nicht');
+  // Nur wenn es fehlt: ein Hinweis, der immer steht, wird nach dem ersten
+  // Speichern zur Luege.
+  assert.match(body, /const newField = state\.fieldIds\.color == null/,
+    'der Hinweis haengt nicht am fehlenden Feld');
+  // Und er wird auch gezeichnet: gerechnet und nicht eingefuegt sieht genauso
+  // aus wie gar nicht vorhanden.
+  assert.match(body, /\$\{newField\}/, 'der angekuendigte Hinweis wird nicht gezeichnet');
+});
+
 test('die Kachel zaehlt, was sie nicht zeigt', () => {
   // Der gemeldete Fehler: ein Tag mit acht Stunden zeigte fuenf, mit Pausen
   // fehlten drei - und weil `.widget` abschneidet, sah die Liste vollstaendig

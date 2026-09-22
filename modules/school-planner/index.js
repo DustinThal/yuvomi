@@ -984,9 +984,17 @@ function renderColors() {
     return `<li class="school-color">${control}<span class="school-color__name">${esc(subject)}</span></li>`;
   }).join('');
 
+  // Solange es das Farbfeld nicht gibt, sagt das Panel es vorher: die Farbe
+  // anzunehmen legt es an (`saveSubjectColor()`), und ein Feld, das im
+  // Schichtplan auftaucht, ohne dass jemand es bestellt hat, will erklaert sein.
+  const newField = state.fieldIds.color == null
+    ? `<p class="school-hint">${esc(t('extensions.school-planner.colors.newField'))}</p>`
+    : '';
+
   return `<details class="school-panel school-colors" id="school-colors">
   <summary class="school-colors__summary">${esc(t('extensions.school-planner.colors.heading', { count: subjects.length }))}</summary>
   <p class="school-hint">${esc(t('extensions.school-planner.colors.hint'))}</p>
+  ${newField}
   <ul class="school-colors__list">${rows}</ul>
 </details>`;
 }
@@ -1006,13 +1014,23 @@ function keepColorsOpen() {
 /**
  * Eine Fachfarbe schreiben.
  *
- * Drei Schritte, und der erste ist der, den man vergisst: das Farbfeld muss an
+ * Der erste Schritt ist der, den man vergisst: das Farbfeld muss es geben und an
  * jeder betroffenen Stunde haengen. `validateFieldValues` weist JEDEN Feldwert
  * ab, dessen Feld nicht an der Schichtart haengt - und zwar den ganzen Satz, es
  * prueft Zeile fuer Zeile und bricht bei der ersten ab
  * (`server/routes/schedule.js:189`). Fehlschlaege je Stunde werden geschluckt,
  * wie in `attachFieldsToPeriods()`: eine fremde Stunde ohne Adminrecht laesst
  * sich nicht aendern, und das darf die eigenen nicht mitreissen.
+ *
+ * `ensureFields()` steht deshalb hier und nicht mehr nur in der Einrichtung: die
+ * Farbe kam nachtraeglich dazu (1.1.0), und wer davor eingerichtet hat, hat kein
+ * Feld `Farbe` - `needsSetup()` schickt ihn aber nicht mehr durch die
+ * Einrichtung, weil Muster und Felder ja da sind. Ohne diese Zeile lief die
+ * Auswahl in ein stilles `return`: nichts geschrieben, nichts gesagt, und der
+ * Regler stand beim naechsten Zeichnen wieder auf der gerechneten Farbe. Genau
+ * das liest sich als "die Farbe wird nicht gespeichert". Anlegen darf jedes
+ * Haushaltsmitglied (`server/routes/schedule.js:247`), und wenn nichts fehlt,
+ * kostet der Aufruf keinen einzigen Request.
  *
  * `''` heisst "wieder automatisch": der Server ueberspringt leere Werte
  * (`fieldValue()` liefert dafuer `null`, server/routes/schedule.js:157), die
@@ -1021,9 +1039,15 @@ function keepColorsOpen() {
  * Knopf - es ist das Feld auf die gerechnete Farbe zu stellen.
  */
 async function saveSubjectColor(subject, rawColor) {
+  await ensureFields();
   const colorFieldId = state.fieldIds.color;
   const subjectFieldId = state.fieldIds.subject;
-  if (colorFieldId == null || subjectFieldId == null) return;
+  // Nach `ensureFields()` heisst das: anlegen ging nicht (der Aufruf wirft dann)
+  // oder der Haushalt hat ein Feld, das die Namensaufloesung nicht sieht. Kein
+  // stiller Ausstieg mehr - der Aufrufer meldet den Fehler.
+  if (colorFieldId == null || subjectFieldId == null) {
+    throw new Error('Ohne die Felder Fach und Farbe laesst sich keine Farbe speichern.');
+  }
   const color = normalizeColor(rawColor);
   const wanted = normalizeName(subject);
 

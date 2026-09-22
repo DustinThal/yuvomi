@@ -43,6 +43,7 @@
   "colors.heading": "Farben der Fächer ({{count}})",
   "colors.choose": "Farbe für {{subject}}",
   "colors.hint": "Eine Farbe gilt für alle Stunden desselben Fachs. Ohne eigene Wahl bekommt jedes Fach eine Farbe, die aus seinem Namen gerechnet ist - sie bleibt auf jedem Gerät dieselbe.",
+  "colors.newField": "Beim ersten Wählen legt der Stundenplan das Feld Farbe im Schichtplan an - dort wird die Farbe gespeichert.",
   "colors.failed": "Die Farbe konnte nicht gespeichert werden",
 
   "times.edit": "Zeiten von {{period}} ändern",
@@ -57,7 +58,7 @@
   "setup.heading": "Stundenplan einrichten",
   "setup.intro": "Die Einrichtung legt an, was noch fehlt - vorhandenes bleibt und wird wiedergefunden:",
   "setup.periods": "Sechs Stunden von 08:00 bis 13:15 als Schichtarten (Zeiten später im Schichtplan änderbar)",
-  "setup.fields": "Die Felder Fach, Raum und Lehrer",
+  "setup.fields": "Die Felder Fach, Raum, Lehrer und Farbe",
   "setup.plan": "Ein 7-Tage-Muster „{{name}}“ ab diesem Montag",
   "setup.create": "Einrichten",
   "setup.running": "Richte ein…",

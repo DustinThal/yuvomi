@@ -43,6 +43,7 @@
   "colors.heading": "Subject colours ({{count}})",
   "colors.choose": "Colour for {{subject}}",
   "colors.hint": "One colour covers every lesson of the same subject. With no choice of your own, a subject gets a colour worked out from its name - the same one on every device.",
+  "colors.newField": "The first time you pick one, the timetable creates the field Farbe in the shift planner - that is where the colour is stored.",
   "colors.failed": "The colour could not be saved",
 
   "times.edit": "Change the times of {{period}}",
@@ -57,7 +58,7 @@
   "setup.heading": "Set up the timetable",
   "setup.intro": "Setup creates what is missing - anything already there is kept and found again:",
   "setup.periods": "Six periods from 08:00 to 13:15 as shift types (times can be changed later in the shift planner)",
-  "setup.fields": "The fields subject, room and teacher",
+  "setup.fields": "The fields subject, room, teacher and colour",
   "setup.plan": "A 7-day pattern \"{{name}}\" starting this Monday",
   "setup.create": "Set up",
   "setup.running": "Setting up…",

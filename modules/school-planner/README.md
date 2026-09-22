@@ -113,6 +113,16 @@ Two consequences, both deliberate:
   every row of that subject in a single write. "Mathematics is always blue" holds
   everywhere, not only in the cell that was touched.
 
+The field is created when it is first needed. **Einrichten** creates it with the
+other three, but a household that set the module up before the colour existed
+(1.1.0) has no `Farbe` field - and setup is not offered a second time once a plan
+exists. So picking a colour creates the field if it is missing, and the panel says
+so above the list before the first pick. Any household member may create one
+(`server/routes/schedule.js`); the field is then attached to the affected periods,
+which is what the paragraph above is about. Without that repair the pick had
+nowhere to go: nothing was written and nothing was said, which looks exactly like
+a save that does not work.
+
 If the field is later renamed or deleted in the shift planner, the module falls
 back to the computed colour instead of failing - the same happens if someone
 types something other than a colour into the field by hand.
@@ -186,9 +196,10 @@ school day the dashboard tile carries.
 `school-planner.test.js` covers the delivery promises: every used translation key
 present in both locales, the module accent in `theme.js` equal to the one in
 `module.json`, every file the manifest names actually existing (a missing widget
-entry makes the whole module load as errored), the two promises the colour rests
-on - that the colour field is attached outside the overlay, and that a colour is
-attached to the period before it is written - and the tile's arithmetic, which is
+entry makes the whole module load as errored), the three promises the colour rests
+on - that the colour field is attached outside the overlay, that a colour is
+attached to the period before it is written, and that a missing colour field is
+created rather than quietly skipped - and the tile's arithmetic, which is
 compared against the core's own grid (`grid-auto-rows` in `dashboard.css`,
 `--space-5` in `tokens.css`) so the estimate cannot drift away from the layout it
 describes.
