@@ -254,8 +254,8 @@ test('die Zeit-Grammatik ist dieselbe wie die des Servers', () => {
  * Ein `closeModal()` ohne `force` stellt die Rueckfrage also hinter das
  * erfolgreiche Schreiben und wirft Eingaben weg, die schon in der Datenbank
  * stehen. Das Haus schliesst nach einem geglueckten Schreibvorgang mit
- * `closeModal({ force: true })` (public/pages/category-manager.js:596,
- * public/components/task-detail.js:100).
+ * `closeModal({ force: true })` (public/components/task-detail.js:100,
+ * public/components/fasting-controls.js:182).
  */
 
 test('ein erfolgreiches Speichern schliesst ohne Rueckfrage', () => {
