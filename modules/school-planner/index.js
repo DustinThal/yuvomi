@@ -350,7 +350,14 @@ async function saveTimes(form, period) {
   if (button) button.disabled = true;
   try {
     await api.put(`/schedule/shift-types/${encodeURIComponent(period.id)}`, { start_time: start, end_time: end });
-    await closeModal();
+    // `{ force: true }`, weil das Schreiben schon durch ist: der Dirty-Waechter
+    // vergleicht das Formular mit dem Stand beim Oeffnen, und ein Formular ist
+    // genau dann abweichend, wenn jemand etwas geaendert hat - also immer, wenn
+    // hier jemand speichert. Ohne `force` kaeme die Rueckfrage "Aenderungen
+    // verwerfen?" NACH dem erfolgreichen Speichern und wuerfe Eingaben weg, die
+    // laengst in der Datenbank stehen. Im `catch` bleibt der Dialog offen und
+    // der Waechter scharf - dort waeren die Eingaben wirklich verloren.
+    await closeModal({ force: true });
     await reload();
     if (!state.signal?.aborted) {
       state.notice = '';
@@ -890,7 +897,10 @@ async function writeCell(form, position, periodId, period, { clear = false } = {
     }
 
     await saveDays(kept);
-    await closeModal();
+    // Wie in `saveTimes()`: das Schreiben ist durch, die Rueckfrage des
+    // Dirty-Waechters waere hier eine Frage nach Eingaben, die schon gespeichert
+    // sind. Der `catch` unten laesst den Dialog dagegen offen.
+    await closeModal({ force: true });
     await reload();
     if (!state.signal?.aborted) {
       state.notice = '';

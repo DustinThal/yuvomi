@@ -245,3 +245,29 @@ test('die Zeit-Grammatik ist dieselbe wie die des Servers', () => {
   assert.ok(theirs, 'die Zeit-Grammatik des Servers wurde nicht gefunden - Pattern geaendert?');
   assert.equal(mine[1], theirs[1], 'Modul und Server pruefen Zeiten verschieden');
 });
+
+/* ── Das Schliessen ─────────────────────────────────────────────────────────
+ *
+ * Der Dirty-Waechter in `public/components/modal.js` fragt beim Schliessen nach,
+ * sobald das Formular vom Stand beim Oeffnen abweicht. Das ist bei JEDEM
+ * Speichervorgang der Fall - gespeichert wird nur, was jemand geaendert hat.
+ * Ein `closeModal()` ohne `force` stellt die Rueckfrage also hinter das
+ * erfolgreiche Schreiben und wirft Eingaben weg, die schon in der Datenbank
+ * stehen. Das Haus schliesst nach einem geglueckten Schreibvorgang mit
+ * `closeModal({ force: true })` (public/pages/category-manager.js:596,
+ * public/components/task-detail.js:100).
+ */
+
+test('ein erfolgreiches Speichern schliesst ohne Rueckfrage', () => {
+  // Geprueft wird der ganze Quelltext und nicht nur die zwei bekannten
+  // Speicherpfade: eine dritte Stelle, die spaeter dazukommt, faellt hier mit
+  // auf. Kommentare werden vorher entfernt, damit ein Satz UEBER
+  // `closeModal` nicht als Aufruf zaehlt.
+  const code = read('index.js')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^\s*\/\/.*$/gm, '');
+  const calls = [...code.matchAll(/closeModal\(([^)]*)\)/g)].map((match) => match[1].trim());
+  assert.ok(calls.length >= 2, `nur ${calls.length} closeModal-Aufrufe gefunden - liest der Test die Datei noch?`);
+  const unforced = calls.filter((args) => !/force:\s*true/.test(args));
+  assert.deepEqual(unforced, [], `ohne force geschlossen: ${unforced.map((a) => `closeModal(${a})`).join(', ')}`);
+});
