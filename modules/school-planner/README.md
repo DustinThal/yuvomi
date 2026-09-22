@@ -1,8 +1,9 @@
 # School Planner (Stundenplan)
 
 A real weekly timetable for Yuvomi - a grid of subjects, times and rooms, plus a
-"tomorrow" view and a dashboard tile that answers the question a school evening
-actually asks: **what does she have tomorrow, and what has to go in the bag.**
+"tomorrow" view and a dashboard tile that answers the question a school day
+actually asks: **what is left today, what is on tomorrow, and what has to go in
+the bag.**
 
 This module exists because the shift planner's "school" option is a *preset*
 (`PRESET_TEMPLATES.school` in `public/pages/schedule.js`): four periods, one
@@ -33,8 +34,8 @@ New or changed module folders are scanned at runtime - no image rebuild. See
 [MODULES.md](../../MODULES.md) for Podman, Portainer, Unraid and TrueNAS.
 
 The module appears as **Stundenplan** in the navigation, in the custom-modules
-section, and as the dashboard widget **Stunden morgen** (hidden by default;
-enable it under *Customize*).
+section, and as the dashboard widget **Stunden heute und morgen** (hidden by
+default; enable it under *Customize*).
 
 ## Setup
 
@@ -91,10 +92,22 @@ It is a *display* setting, and deliberately nothing more:
   cannot shorten what the views afterwards ask for.
 - What a hidden day *does* carry is reported in the panel rather than swallowed.
 
-The dashboard tile **Stunden morgen** shows the next school day. How much of it
-fits depends on the tile's height, and the tile picks between two layouts on its
-own - two lines per lesson (time, subject, room and teacher below) while the day
-fits, one line per lesson (time and subject, room after it) once it does not:
+The dashboard tile **Stunden heute und morgen** shows the running day and the
+next school day. That order is the whole design: at six in the morning the day
+ahead is the question, and "tomorrow" would make you work out the weekday from
+the date. It needs no clock face for that - a lesson that is already over drops
+out of today's list, and a day without lessons is not a section
+(`remainingLessons()`, `widgetDayPlan()` in `timetable.js`). So the tile shifts
+by itself: today while school is on, tomorrow from the last bell, and on a
+Friday evening Monday - with its date, because that is then the one answer worth
+giving.
+
+Which day gets how much room is decided per day, not per tile: today takes what
+it needs and leaves the next day at least one row, so a full day cannot push
+tomorrow off the tile entirely. How much fits depends on the tile's height, and
+the tile picks between two layouts on its own - two lines per lesson (time,
+subject, room and teacher below) while the day fits, one line per lesson (time
+and subject, room after it) once it does not:
 
 | Tile | Two lines per lesson | One line per lesson |
 | --- | --- | --- |
@@ -102,13 +115,19 @@ fits, one line per lesson (time and subject, room after it) once it does not:
 | 2x3 | 8 lessons | 14 lessons |
 | 2x4 | 12 lessons | 20 lessons |
 
+(For one day. Two days cost one extra day line, so each carries roughly one
+lesson less - and writing one line per lesson is what makes room for the second
+day at all.)
+
 So a normal eight-lesson day stands completely on a 2x2 tile. A day with breaks
 in it is longer than that, and **2x3 is the size that carries a whole day with
-breaks**. Whatever still does not fit is counted in a line below the list:
-nothing disappears without a number, and the badge in the header always counts
-the whole day rather than the visible part. On a flat tile (2x1, 3x1) the
-one-line layout would not gain a single row, so the tile keeps its two lines and
-the three rows it always had - there the number below the list is the only change.
+breaks**. Whatever still does not fit is counted next to the day it belongs to -
+"Heute +2" - so nothing disappears without a number, and the badge in the header
+counts every lesson of the days shown rather than the visible part. On a flat
+tile (2x1, 3x1) the one-line layout would not gain a single row, so the tile
+keeps its two lines and the three rows it always had, and it stays with one day:
+splitting a single row of height into two headings would take the day line from
+both of them.
 
 Clearing subject, room and teacher makes the period free: an empty cell is the
 absence of a row, not a row with an empty value.
@@ -219,7 +238,7 @@ and every week repeats from the pattern.
 - The tile never scrolls inside itself: the core removed `overflow: auto` from
   `.widget__body` on purpose (Issue #166, nested scroll containers blank the
   screen on iOS and Android). It shows fewer rows instead - and says how many it
-  left out.
+  left out, next to the day it left them out of.
 - No dash is ever an em dash or en dash.
 - The composition mode is `full`, so the page header carries no measure
   (`PAGE-016` in `test/test-frontend-audit.js`).
@@ -243,18 +262,24 @@ anchor rather than the index, and what a hidden day still carries), the colour
 chain (the hex grammar, listing the subjects of a plan, spreading one colour over
 every row of a subject, resolving a lesson's colour in its three stages, and
 falling back to the computed colour when the stored value is missing or
-unusable), and how much of a school day the dashboard tile carries.
+unusable), and how much of which school day the dashboard tile carries (the
+budget from the tile's own height, the day line each day costs, the split
+between today and tomorrow, an empty day that costs nothing, and the clock that
+decides what still counts as today).
 `school-planner.test.js` covers the delivery promises: every used translation key
 present in both locales, the module accent in `theme.js` equal to the one in
 `module.json`, every file the manifest names actually existing (a missing widget
-entry makes the whole module load as errored), the four promises the colour rests
+entry makes the whole module load as errored), the widget's name agreeing with
+itself in all four places it is written down, the four promises the colour rests
 on - that the colour field is attached outside the overlay, that a colour is
 attached to the period before it is written, that a missing colour field is
 created rather than quietly skipped, and that the palette reaches the rendering
 and the writing side alike - the school-day promises (that the two grids ask for
 the shown days while the loader keeps the full week, that the choice is stored
 per device and survives a reload, that the panel hides nothing silently, and that
-the last day cannot be switched off) - and the tile's arithmetic, which is
+the last day cannot be switched off) - and the tile: that it hands both days to
+the one planner instead of capping them itself, that the count it left out is
+the planner's number and sits in the day line, and that its arithmetic is
 compared against the core's own grid (`grid-auto-rows` in `dashboard.css`,
 `--space-5` in `tokens.css`) so the estimate cannot drift away from the layout it
 describes.

@@ -42,13 +42,14 @@ import {
   buildWeekGrid,
   nextDateWithLessons,
   nextLesson,
+  remainingLessons,
   normalizeColor,
   subjectColors,
   subjectsInPlan,
   spreadSubjectColor,
   lessonsByDate,
   widgetRowBudget,
-  widgetRowPlan,
+  widgetDayPlan,
 } from '../timetable.js';
 
 // 2026-01-05 ist ein Montag, 2026-09-21 ebenfalls - beide als Anker geeignet.
@@ -600,6 +601,22 @@ test('lessonsByDate ordnet nach Tag, laesst freie Tage weg und fuellt jeden Schl
  * wird GEZAEHLT. Der Deckel selbst ist eine Schaetzung aus dem Raster und darf
  * sich aendern; diese Regel nicht. */
 
+/** Ein Tag, wie ihn die Kachel uebergibt - die Stundenzahl ist alles, was zaehlt. */
+const widgetDay = (key, count) => ({
+  key,
+  lessons: Array.from({ length: count }, (unused, index) => ({
+    startTime: '08:00',
+    endTime: '08:45',
+    subject: `Fach ${index + 1}`,
+  })),
+});
+
+/** Der Plan fuer eine Liste von Stundenzahlen, in Tagen ab `2026-01-05`. */
+const planOf = (size, counts) => widgetDayPlan(
+  size,
+  counts.map((count, index) => widgetDay(`2026-01-0${5 + index}`, count)),
+);
+
 test('widgetRowBudget haelt die Zeilen des Kerns als Untergrenze', () => {
   // `listRowCap()` in public/pages/dashboard.js: 3 Zeilen flach, 5 Zeilen hoch.
   // Die beiden Zahlen sind die bestehende Zusage des Kerns an seine eigenen
@@ -637,19 +654,33 @@ test('widgetRowBudget rechnet aus dem Raster', () => {
   assert.equal(widgetRowBudget('2x3').compact, 14, '348px / 24px');
 });
 
+test('widgetRowBudget zieht je Tag eine Tageszeile ab', () => {
+  // Zwei Tage sind zwei Ueberschriften. Wer sie nicht abzieht, plant eine Zeile
+  // ein, die es nicht gibt - und `.widget` schneidet sie ab, statt sie zu melden.
+  assert.equal(widgetRowBudget('2x4').full, 12, 'ein Tag: 500px / 40px');
+  assert.equal(widgetRowBudget('2x4', { sections: 2 }).full, 11, 'zwei Tage: 476px / 40px');
+  assert.equal(widgetRowBudget('2x3').compact, 14);
+  assert.equal(widgetRowBudget('2x3', { sections: 2 }).compact, 13);
+  // Und der Deckel des Kerns gilt dann nicht mehr: zwei Tage sind etwas, das der
+  // Kern nicht kennt, und seine Zeilen sind nicht auf zwei Ueberschriften
+  // gerechnet. Die Untergrenze ist dort eine Zeile je Abschnitt.
+  assert.equal(widgetRowBudget('2x2', { sections: 2 }).full, 4, '172px / 40px statt der fuenf des Kerns');
+  assert.ok(widgetRowBudget('2x2', { sections: 2 }).full >= 2, 'sonst verschwindet der zweite Tag still');
+});
+
 test('ein ganzer Schultag passt auf die Kachel', () => {
   // Der gemeldete Fall: acht Stunden auf einem 2x2-Feld. Vorher standen fuenf
   // da, die letzten drei fehlten lautlos.
-  const day = widgetRowPlan('2x2', 8);
-  assert.equal(day.cap, 8, 'acht Stunden muessen alle dastehen');
-  assert.equal(day.more, 0);
-  assert.equal(day.dense, true, 'dafuer schreibt die Kachel einzeilig');
+  const plan = planOf('2x2', [8]);
+  assert.equal(plan.days[0].cap, 8, 'acht Stunden muessen alle dastehen');
+  assert.equal(plan.days[0].more, 0);
+  assert.equal(plan.dense, true, 'dafuer schreibt die Kachel einzeilig');
 
   // Mit Pausen wird der Tag laenger als jede zweizeilige Kachel. Auf 2x2 bleibt
   // es eng - dann wird gezaehlt statt abgeschnitten -, auf 2x3 steht er ganz.
-  assert.equal(widgetRowPlan('2x2', 11).more > 0, true, 'was nicht passt, wird gezaehlt');
-  assert.equal(widgetRowPlan('2x3', 11).cap, 11);
-  assert.equal(widgetRowPlan('2x3', 11).more, 0);
+  assert.equal(planOf('2x2', [11]).days[0].more > 0, true, 'was nicht passt, wird gezaehlt');
+  assert.equal(planOf('2x3', [11]).days[0].cap, 11);
+  assert.equal(planOf('2x3', [11]).days[0].more, 0);
 });
 
 test('ein kurzer Tag behaelt Raum und Lehrer', () => {
@@ -657,21 +688,21 @@ test('ein kurzer Tag behaelt Raum und Lehrer', () => {
   // in den Deckel passt, behaelt die zweite Zeile mit Raum und Lehrer.
   for (const size of ['2x2', '2x3', '2x4']) {
     const budget = widgetRowBudget(size).full;
-    const plan = widgetRowPlan(size, budget);
+    const plan = planOf(size, [budget]);
     assert.equal(plan.dense, false, `${size}: ${budget} Stunden passen zweizeilig`);
-    assert.equal(plan.cap, budget);
-    assert.equal(plan.more, 0);
+    assert.equal(plan.days[0].cap, budget);
+    assert.equal(plan.days[0].more, 0);
     // Eine Stunde mehr kippt in die einzeilige Fassung - und gewinnt dabei
     // Zeilen. Ohne diesen Gewinn waere der Wechsel ein Verlust und der Raum um
-    //sonst weg.
-    const next = widgetRowPlan(size, budget + 1);
+    // sonst weg.
+    const next = planOf(size, [budget + 1]);
     assert.equal(next.dense, true);
-    assert.ok(next.cap > plan.cap, `${size}: einzeilig muss mehr Zeilen ergeben`);
-    assert.equal(next.more, 0);
+    assert.ok(next.days[0].cap > plan.days[0].cap, `${size}: einzeilig muss mehr Zeilen ergeben`);
+    assert.equal(next.days[0].more, 0);
   }
 });
 
-test('was nicht auf die Kachel passt, wird gezaehlt', () => {
+test('was nicht auf der Kachel steht, wird gezaehlt', () => {
   // Die Regel, die den Fehler ausmacht: es gibt keinen Fall, in dem eine Stunde
   // weder dasteht noch genannt wird. Geprueft ueber jede Groesse und jede
   // Tageslaenge - der Deckel ist eine Schaetzung, diese Regel nicht.
@@ -679,35 +710,31 @@ test('was nicht auf die Kachel passt, wird gezaehlt', () => {
     const { full, compact } = widgetRowBudget(size);
     const budget = Math.max(full, compact);
     for (let count = 0; count <= budget + 3; count += 1) {
-      const plan = widgetRowPlan(size, count);
-      assert.equal(plan.cap + plan.more, count, `${size} mit ${count} Stunden verliert eine`);
-      assert.ok(plan.cap <= budget, `${size}: mehr Zeilen als Platz`);
-      assert.equal(plan.more > 0, plan.cap < count, `${size}: die Mehr-Zeile passt nicht zum Rest`);
-      // Und die Mehr-Zeile bekommt ihren eigenen Platz: wo dicht geschrieben
-      // wird, zeigt die Kachel so viele Zeilen, dass eine Zeile des Deckels fuer
-      // sie frei bleibt. Ohne diesen Abzug schoebe sie die letzte Stunde aus der
-      // Kachel.
-      if (plan.more > 0 && plan.dense) {
-        const used = widgetRowBudget(size).compact;
-        assert.ok(plan.cap < used, `${size} mit ${count}: die Mehr-Zeile verdraengt eine Stunde`);
+      for (const plan of [planOf(size, [count]), planOf(size, [count, count])]) {
+        for (const day of plan.days) {
+          assert.equal(day.cap + day.more, count, `${size} mit ${count} Stunden verliert eine`);
+          assert.ok(day.cap <= budget, `${size}: mehr Zeilen als Platz`);
+          assert.equal(day.more > 0, day.cap < count, `${size}: die Mehr-Zahl passt nicht zum Rest`);
+        }
       }
     }
   }
   // Ein Tag ohne Stunden und eine kaputte Zahl sind kein Sonderfall.
   for (const count of [0, undefined, null, -3, 'acht']) {
-    assert.deepEqual(widgetRowPlan('2x2', count), { dense: false, cap: 0, more: 0 }, `"${String(count)}"`);
+    assert.deepEqual(widgetDayPlan('2x2', [widgetDay(MONDAY, count)]), { dense: false, days: [] }, `"${String(count)}"`);
   }
+  assert.deepEqual(widgetDayPlan('2x2', null), { dense: false, days: [] });
 });
 
 test('eine flache Kachel behaelt ihre Zeilen und zaehlt trotzdem', () => {
   // Auf einem Feld mit einer Rasterzeile ist der Deckel die Zusage des Kerns (3
-  // Zeilen). Er wird nicht gekuerzt, auch nicht fuer die Mehr-Zeile: dort ist
-  // ohnehin kaum eine Zeile sichtbar, und eine Zeile weniger waere ein Verlust
-  // ohne Gewinn. Gezaehlt wird trotzdem - verschwiegen wird nichts.
-  const plan = widgetRowPlan('2x1', 7);
+  // Zeilen). Er wird nicht gekuerzt: dort ist ohnehin kaum eine Zeile sichtbar,
+  // und eine Zeile weniger waere ein Verlust ohne Gewinn. Gezaehlt wird
+  // trotzdem - verschwiegen wird nichts.
+  const plan = planOf('2x1', [7]);
   assert.equal(plan.dense, false);
-  assert.equal(plan.cap, 3, 'die drei Zeilen des Kerns bleiben');
-  assert.equal(plan.more, 4);
+  assert.equal(plan.days[0].cap, 3, 'die drei Zeilen des Kerns bleiben');
+  assert.equal(plan.days[0].more, 4);
 });
 
 test('die einzeilige Fassung nur, wenn sie Zeilen gewinnt', () => {
@@ -718,11 +745,93 @@ test('die einzeilige Fassung nur, wenn sie Zeilen gewinnt', () => {
   for (const size of ['1x1', '2x1', '3x1', '4x1']) {
     const { full, compact } = widgetRowBudget(size);
     assert.ok(compact <= full, `${size} darf nicht dichter rechnen als zweizeilig`);
-    assert.equal(widgetRowPlan(size, full + 4).dense, false);
+    assert.equal(planOf(size, [full + 4]).dense, false);
   }
   // Eine Groessenangabe, die der Kern nicht kennt, faellt auf dieselbe flache
   // Vorgabe zurueck wie `listRowCap()`: `String(size ?? '1x1')`.
   for (const broken of [undefined, null, '', 'kaputt', '2', 'x', 2]) {
     assert.deepEqual(widgetRowBudget(broken), widgetRowBudget('1x1'), `"${String(broken)}"`);
   }
+});
+
+/* ── Zwei Tage auf einer Kachel ───────────────────────────────────────────── */
+
+test('der zweite Tag nimmt, was der erste uebrig laesst', () => {
+  // Das 2x3-Feld traegt dicht 13 Zeilen. Ein Tag mit acht Stunden fuellt es
+  // zweizeilig schon fast allein - dicht steht er ganz da und laesst fuenf
+  // Zeilen fuer den naechsten. Genau dafuer wird dicht geschrieben.
+  const plan = planOf('2x3', [8, 6]);
+  assert.equal(plan.dense, true, 'ohne die einzeilige Fassung passt der zweite Tag nicht');
+  assert.equal(plan.days[0].cap, 8, 'der laufende Tag steht ganz da');
+  assert.equal(plan.days[1].cap, 5, 'der Rest gehoert dem naechsten Tag');
+  assert.equal(plan.days[1].more, 1);
+});
+
+test('jeder Tag mit Stunden behaelt mindestens eine Zeile', () => {
+  // Ohne diese Reservierung frasse ein voller Tag den naechsten restlos: acht
+  // Stunden gegen acht Zeilen hiesse, dass morgen gar nicht vorkommt, obwohl
+  // Platz fuer eine Zeile war. Geprueft auf jeder Hoehe, die zwei Tage traegt.
+  for (const size of ['2x2', '3x2', '2x3', '2x4']) {
+    for (const counts of [[8, 1], [8, 6], [12, 12], [1, 8]]) {
+      const plan = planOf(size, counts);
+      assert.equal(plan.days.length, 2, `${size} mit ${counts.join('/')} verliert einen Tag`);
+      for (const day of plan.days) assert.ok(day.cap >= 1, `${size} mit ${counts.join('/')}: ein Tag ohne Zeile`);
+    }
+  }
+});
+
+test('auf einer flachen Kachel bleibt es bei einem Tag', () => {
+  // Eine Rasterzeile ist die ganze Kachel. Sie in zwei Abschnitte zu teilen
+  // nimmt beiden die Tageszeile und zeigt am Ende weniger als vorher - dort
+  // bleibt es beim laufenden Tag und bei den drei Zeilen des Kerns.
+  const plan = planOf('2x1', [7, 7]);
+  assert.equal(plan.days.length, 1, 'zwei Tage auf einer Zeile Hoehe sind keine zwei Tage');
+  assert.equal(plan.days[0].cap, 3);
+});
+
+test('ein Tag ohne Stunden ist kein Abschnitt', () => {
+  // Der laufende Tag, an dem nichts mehr ansteht, und der Samstag fallen hier
+  // heraus - ohne Zutun des Aufrufers. Deshalb braucht die Kachel keinen
+  // Umschalter: abends bleibt der naechste Tag uebrig, und der bekommt die
+  // ganze Kachel.
+  const plan = planOf('2x3', [0, 6]);
+  assert.equal(plan.days.length, 1);
+  assert.equal(plan.days[0].key, '2026-01-06', 'der leere Tag steht trotzdem in der Liste');
+  assert.equal(plan.days[0].cap, 6);
+  // Und er kostet auch keine Zeile: der volle Tag bekommt genau den Platz, den
+  // er allein bekaeme. Wuerde die leere Ueberschrift mitgezaehlt, verloere die
+  // Kachel eine Stunde an einen Tag, den sie nicht zeigt.
+  const withEmpty = planOf('2x3', [0, 11]).days[0];
+  const alone = planOf('2x3', [11]).days[0];
+  assert.equal(withEmpty.cap, alone.cap, 'der leere Tag verkuerzt die Kachel');
+  assert.equal(withEmpty.more, alone.more);
+});
+
+test('abends steht nur noch der naechste Tag auf der Kachel', () => {
+  // Die Uhr entscheidet, was heute noch dazugehoert - und sie entscheidet es
+  // ueber das ENDE der Stunde. Eine Stunde, die gerade laeuft, ist nicht vorbei.
+  const lessons = [
+    { startTime: '08:00', endTime: '08:45', subject: 'Mathematik' },
+    { startTime: '09:45', endTime: '10:30', subject: 'Deutsch' },
+    { startTime: '11:00', endTime: '11:45', subject: 'Sport' },
+  ];
+  assert.equal(remainingLessons(lessons, 8 * 60).length, 3, 'um acht steht der ganze Tag da');
+  assert.equal(remainingLessons(lessons, 9 * 60).length, 2, 'die erste ist vorbei');
+  const running = remainingLessons(lessons, 10 * 60 + 10);
+  assert.equal(running.length, 2);
+  assert.equal(running[0].subject, 'Deutsch', 'eine laufende Stunde faellt nicht heraus');
+  // Die Grenze selbst: wer um 08:45 auf die Kachel sieht, hat die Stunde hinter
+  // sich - gezaehlt wird bis zum Ende, und das Ende ist vorbei.
+  assert.equal(remainingLessons(lessons, 8 * 60 + 45).length, 2, 'die gerade beendete Stunde bleibt stehen');
+  assert.deepEqual(remainingLessons(lessons, 12 * 60), [], 'nach der letzten bleibt nichts');
+  // Eine Stunde ohne Ende ist keine vergangene Stunde, und ohne Uhr bleibt der
+  // ganze Tag stehen: lieber zu viel als ein leeres Brett aus Versehen. Geprueft
+  // mit einem Wert, der NICHT als Mitternacht durchgeht - `null` waere 0 und
+  // damit ohnehin vor jeder Stunde.
+  const timeless = [{ startTime: '08:00', subject: 'Vertretung' }];
+  assert.equal(remainingLessons(timeless, 20 * 60).length, 1);
+  assert.equal(remainingLessons(lessons, undefined).length, 3, 'ohne Uhr faellt der Tag aus');
+  assert.equal(remainingLessons(lessons, 'halb acht').length, 3);
+  assert.equal(remainingLessons(lessons, null).length, 3);
+  assert.deepEqual(remainingLessons(null, 600), []);
 });

@@ -420,7 +420,7 @@ test('das Panel sagt das neue Feld vorher an', () => {
 test('die Kachel zaehlt, was sie nicht zeigt', () => {
   // Der gemeldete Fehler: ein Tag mit acht Stunden zeigte fuenf, mit Pausen
   // fehlten drei - und weil `.widget` abschneidet, sah die Liste vollstaendig
-  // aus. Die Rechnung selbst steht in `widgetRowPlan()` und ist dort geprueft;
+  // aus. Die Rechnung selbst steht in `widgetDayPlan()` und ist dort geprueft;
   // hier steht die Zusage, dass die Kachel sie BENUTZT, statt weiter selbst zu
   // deckeln.
   // Die Zeilenenden sind im Arbeitsbaum CRLF, die Muster unten sind es nicht:
@@ -429,18 +429,84 @@ test('die Kachel zaehlt, was sie nicht zeigt', () => {
   const fn = /export async function renderWidget\(container, \{ size \} = \{\}\)\s*\{([\s\S]*?)\n\}\n/.exec(source);
   assert.ok(fn, 'renderWidget fehlt');
   const body = fn[1].replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
-  assert.match(body, /const \{ dense, cap, more \} = widgetRowPlan\(size, lessons\.length\)/,
-    'die Kachel deckelt selbst, statt widgetRowPlan zu fragen');
-  assert.match(body, /lessons\.slice\(0, cap\)/, 'gezeigt wird nicht der gedeckelte Satz');
-  assert.match(body, /\$\{shown\.map\(\(lesson\) => lessonRow\(lesson, dense\)\)/, 'die Fassung erreicht die Zeile nicht');
-  // Die Mehr-Zeile nennt die Zahl, die die Planung ausgerechnet hat. Ein
+  assert.match(body, /const plan = widgetDayPlan\(size, days\)/,
+    'die Kachel deckelt selbst, statt widgetDayPlan zu fragen');
+  assert.match(body, /slice\(0, day\.cap\)/, 'gezeigt wird nicht der gedeckelte Satz');
+  assert.match(body, /\$\{shown\.map\(\(lesson\) => lessonRow\(lesson, plan\.dense\)\)/, 'die Fassung erreicht die Zeile nicht');
+  // Die Mehr-Zahl nennt die Zahl, die die Planung ausgerechnet hat. Ein
   // zweites `lessons.length - cap` waere dieselbe Zahl aus einer zweiten Quelle -
   // und die eine von beiden waere irgendwann falsch.
-  assert.match(body, /more > 0 \?/, 'die Mehr-Zeile haengt nicht an ihrem eigenen Wert');
-  assert.match(body, /\{ rest: more \}/, 'die Mehr-Zeile rechnet den Rest selbst aus');
-  assert.doesNotMatch(body, /lessons\.length - cap/, 'der Rest wird zweimal gerechnet');
+  assert.match(body, /day\.more > 0 \?/, 'die Mehr-Zahl haengt nicht an ihrem eigenen Wert');
+  assert.match(body, /\{ rest: day\.more \}/, 'die Mehr-Zahl rechnet den Rest selbst aus');
+  assert.doesNotMatch(body, /lessons\.length -/, 'der Rest wird zweimal gerechnet');
   // Und der Deckel des Kerns ist weg: eine Abschrift, die bleibt, deckelt weiter.
   assert.doesNotMatch(source, /ROW_CAP_TALL|ROW_CAP_SHORT/, 'der alte Deckel steht noch im Modul');
+});
+
+test('die Kachel zeigt heute und den naechsten Schultag', () => {
+  // Der gemeldete Wunsch: um sechs Uhr morgens ist der laufende Tag die Frage,
+  // und "morgen" verlangt Kopfrechnen vom Datum auf den Wochentag. Beide Tage
+  // gehen durch dieselbe Planung, und was heute vorbei ist, faellt VORHER
+  // heraus - sonst stuenden zwei Tage auf der Kachel, von denen einer gestern
+  // war.
+  const source = read('widgets/tomorrow.js').replace(/\r\n/g, '\n');
+  const fn = /export async function renderWidget\(container, \{ size \} = \{\}\)\s*\{([\s\S]*?)\n\}\n/.exec(source);
+  assert.ok(fn, 'renderWidget fehlt');
+  const body = fn[1].replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+  assert.match(body, /key: today, lessons: remainingLessons\(/, 'der laufende Tag wird nicht gefiltert');
+  assert.match(body, /nextDateWithLessons\(tomorrow/, 'der zweite Tag ist nicht der naechste Schultag');
+  // Das Fenster beginnt heute: der laufende Tag kommt aus derselben Antwort wie
+  // der naechste und nicht aus einem zweiten Aufruf.
+  assert.match(body, /from: today/, 'der laufende Tag wird nicht geladen');
+  // Und wer welchen Abschnitt bekommt, entscheidet die Planung - die Kachel
+  // fragt nicht nach dem Wochentag und hat keinen Umschalter.
+  assert.match(body, /widgetDayPlan\(size, days\)/, 'beide Tage erreichen die Planung nicht');
+  assert.match(body, /if \(!plan\.days\.length\)/, 'der Leerzustand haengt nicht an der Planung');
+  // Die Badge zaehlt die Stunden der GEZEIGTEN Tage, nicht die sichtbaren - und
+  // nicht die eines Tages, den die Kachel gar nicht zeichnet.
+  assert.match(body, /plan\.days\.reduce\(\(sum, day\) => sum \+ day\.cap \+ day\.more/,
+    'die Badge zaehlt etwas anderes als die gezeigten Tage');
+});
+
+test('die zweite Tageszeile und die Mehr-Zahl kosten keine Stunde', () => {
+  // Zwei Tage heissen zwei Tageszeilen, und die Mehr-Zahl steht in der ersten
+  // davon - eine eigene Zeile darunter waere die Stunde, die sie zaehlt, und
+  // `.widget` schneidet ab, statt zu melden.
+  const css = read('style.css').replace(/\r\n/g, '\n');
+  const day = /(?:^|\n)\.school-widget__day\s*\{([\s\S]*?)\n\}/.exec(css);
+  assert.ok(day, 'die Regel .school-widget__day fehlt');
+  assert.match(day[1], /justify-content: space-between/, 'die Mehr-Zahl steht nicht neben dem Tag');
+  // Gekuerzt wird der Tagesname, nicht die Zahl. Beide Regeln dafuer stehen
+  // zusammen: ein Flex-Kind schrumpft nicht unter seinen Inhalt, wenn man ihm
+  // nicht `min-width: 0` gibt - die Ellipse bliebe wirkungslos und der Name
+  // schoebe die Zahl aus der Zeile.
+  const name = /(?:^|\n)\.school-widget__day-name\s*\{([\s\S]*?)\n\}/.exec(css);
+  assert.ok(name, 'die Regel .school-widget__day-name fehlt');
+  assert.match(name[1], /text-overflow: ellipsis/, 'ein langer Tagesname schneidet die Zahl ab');
+  assert.match(name[1], /min-width: 0/, 'ohne min-width schrumpft der Name nicht und die Ellipse wirkt nicht');
+  const more = /(?:^|\n)\.school-widget__day-more\s*\{([\s\S]*?)\n\}/.exec(css);
+  assert.ok(more, 'die Regel .school-widget__day-more fehlt');
+  assert.match(more[1], /flex: 0 0 auto/, 'die Zahl gibt nach, statt den Namen zu kuerzen');
+  // Und die Zeilen, die es nicht mehr gibt, stehen auch nicht mehr im
+  // Stylesheet: tote Regeln sind die naechste Stelle, an der jemand sucht.
+  assert.doesNotMatch(css, /\.school-widget__more\s*\{/, 'die eigene Mehr-Zeile steht noch im Stylesheet');
+  assert.doesNotMatch(css, /\.school-widget__note\s*\{/, 'der alte Hinweis steht noch im Stylesheet');
+});
+
+test('die Beschriftung der Kachel steht an vier Stellen gleich', () => {
+  // Der Name steht im Manifest zweimal als Text und zweimal als Schluessel, und
+  // der deutsche Text steht noch einmal in der Sprachdatei - die Vorlage fuer
+  // jede Sprache ohne eigenen Eintrag. Vier Stellen, ein Name: laufen sie
+  // auseinander, heisst dieselbe Kachel je nach Sprache anders, und niemand
+  // findet sie im Auswahlfeld wieder.
+  const pairs = [
+    ...(manifest.capabilities?.widgets ?? []).map((widget) => [widget.label, widget.labelKey]),
+    ...(manifest.capabilities?.permissions?.widgets ?? []).map((widget) => [widget.label, widget.labelKey]),
+  ];
+  assert.ok(pairs.length >= 2, 'keine Kachel im Manifest gefunden');
+  for (const [label, labelKey] of pairs) {
+    assert.equal(label, localeDicts.de[labelKey], `"${labelKey}" heisst im Manifest anders als auf Deutsch`);
+  }
 });
 
 test('die einzeilige Fassung laesst den Raum nicht fallen', () => {

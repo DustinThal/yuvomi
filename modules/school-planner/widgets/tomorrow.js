@@ -1,9 +1,25 @@
 /**
- * Modul: Stundenplan - Dashboard-Kachel "Stunden morgen"
- * Zweck: Der Plan des naechsten Schultages, ohne dass jemand die Seite oeffnen
- *        muss. Das ist der Grund, aus dem es dieses Modul gibt: die Frage
- *        "was hat sie morgen, was muss mit" stellt man abends, und die Antwort
- *        soll auf dem Brett stehen und nicht zwei Klicks entfernt.
+ * Modul: Stundenplan - Dashboard-Kachel "Stunden heute und morgen"
+ *
+ * Der Bezeichner der Kachel bleibt `tomorrow`: die Id steht in den gespeicherten
+ * Dashboard-Layouts der Haushalte, und ein umbenannter Eintrag waere nach dem
+ * naechsten Update eine leere Kachel. Der Name sagt trotzdem, was sie zeigt.
+ *
+ * Zweck: Was heute noch ansteht und was morgen dran ist, ohne dass jemand die
+ *        Seite oeffnen muss. Das ist der Grund, aus dem es dieses Modul gibt:
+ *        die Frage "was hat sie morgen, was muss mit" stellt man abends, und die
+ *        Antwort soll auf dem Brett stehen und nicht zwei Klicks entfernt.
+ *
+ * ── Warum zwei Tage und nicht einer ─────────────────────────────────────────
+ *
+ * "Morgen" war die halbe Antwort. Um sechs Uhr morgens ist der laufende Tag die
+ * ganze Frage - und "morgen" verlangt dann, dass jemand im Kopf vom Datum auf
+ * den Wochentag rechnet. Die Kachel zeigt deshalb beide: erst den laufenden Tag,
+ * dann den naechsten, an dem Unterricht steht. Sie muss dafuer nicht wissen, wie
+ * spaet es ist: was heute schon vorbei ist, faellt in `remainingLessons()`
+ * heraus, und ein Tag ohne Stunden faellt in `widgetDayPlan()` heraus. Abends
+ * steht damit von selbst nur noch der naechste Tag da - dieselbe Kachel, ohne
+ * Umschalter und ohne Einstellung.
  *
  * Abhaengigkeiten: /i18n.js, /utils/html.js, /utils/date.js, /nav-icons.js,
  *        ../data.js, ../timetable.js
@@ -38,7 +54,6 @@ import {
   fetchEntries,
   fetchHouseholdMembers,
   fetchPatterns,
-  fetchWeekStart,
   lessonsByDate,
   pickPattern,
   pickPupil,
@@ -47,7 +62,7 @@ import {
   resolveFieldIds,
 } from '../data.js';
 import { MODULE_ACCENT } from '../theme.js';
-import { addDays, nextDateWithLessons, widgetRowPlan } from '../timetable.js';
+import { addDays, nextDateWithLessons, remainingLessons, widgetDayPlan } from '../timetable.js';
 
 /** Wie weit die Suche nach dem naechsten Schultag reicht - wie auf der Seite. */
 const LOOKAHEAD_DAYS = 21;
@@ -90,6 +105,21 @@ function dayLabel(dateKey, options) {
   } catch {
     return String(dateKey);
   }
+}
+
+/**
+ * Wie ein Tag ueber seiner Liste heisst.
+ *
+ * "Heute" und "Morgen" statt eines Datums: das Datum der beiden naechsten Tage
+ * kennt jeder, der auf ein Dashboard sieht, und in einer Kachel von zwei Spalten
+ * Breite kostet "Montag, 24. September" die halbe Zeile. Erst der Tag, der
+ * weiter weg liegt, braucht seinen Namen - und dann ist er die Auskunft, die die
+ * Kachel geben muss ("morgen ist frei, das hier ist Montag").
+ */
+function dayName(dateKey, { today, tomorrow }) {
+  if (dateKey === today) return t('extensions.school-planner.widgets.dayToday');
+  if (dateKey === tomorrow) return t('extensions.school-planner.widgets.dayTomorrow');
+  return dayLabel(dateKey, { weekday: 'long', day: 'numeric', month: 'long' });
 }
 
 function header(title, count, { link = true } = {}) {
@@ -166,10 +196,9 @@ export async function renderWidget(container, { size } = {}) {
   container.style.setProperty('--widget-accent', MODULE_ACCENT);
 
   const settings = readSettings();
-  const [members, customFields, weekStart] = await Promise.all([
+  const [members, customFields] = await Promise.all([
     fetchHouseholdMembers(),
     fetchCustomFields(),
-    fetchWeekStart(),
   ]);
   const fieldIds = resolveFieldIds(customFields);
   const pupilId = pickPupil(members, { storedId: settings.pupilId });
@@ -192,42 +221,54 @@ export async function renderWidget(container, { size } = {}) {
   const today = todayKey();
   const tomorrow = addDays(today, 1);
   const dateKeys = [];
-  for (let step = 1; step <= LOOKAHEAD_DAYS; step += 1) dateKeys.push(addDays(today, step));
+  for (let step = 0; step <= LOOKAHEAD_DAYS; step += 1) dateKeys.push(addDays(today, step));
 
-  const entries = await fetchEntries({ userId: pupilId, from: tomorrow, to: dateKeys[dateKeys.length - 1] });
+  const entries = await fetchEntries({ userId: pupilId, from: today, to: dateKeys[dateKeys.length - 1] });
   const byDate = lessonsByDate(entries, dateKeys, fieldIds);
   const hasLessons = (dateKey) => (byDate.get(dateKey) ?? []).length > 0;
 
-  const tomorrowLessons = byDate.get(tomorrow) ?? [];
-  const target = tomorrowLessons.length ? tomorrow : nextDateWithLessons(tomorrow, hasLessons, { maxDays: LOOKAHEAD_DAYS });
-  const lessons = target ? (byDate.get(target) ?? []) : [];
+  // Was heute noch ansteht, und dann der naechste Tag mit Unterricht. Zwei
+  // Quellen fuer denselben Vorbehalt: `remainingLessons()` nimmt die Uhr, der
+  // zweite Tag ist nicht der Kalender. Beide sind noetig - eine Stunde, die
+  // heute noch laeuft, gehoert dazu, und "morgen ist frei" ist die Regel und
+  // nicht die Ausnahme.
+  const clock = new Date();
+  const nextKey = nextDateWithLessons(tomorrow, hasLessons, { maxDays: LOOKAHEAD_DAYS });
+  const days = [
+    { key: today, lessons: remainingLessons(byDate.get(today) ?? [], clock.getHours() * 60 + clock.getMinutes()) },
+    { key: nextKey, lessons: nextKey ? (byDate.get(nextKey) ?? []) : [] },
+  ];
 
   if (!container.isConnected) return;
 
-  if (!lessons.length) {
+  // Wie viel von welchem Tag auf die Kachel passt - und in welcher Fassung. Die
+  // Entscheidung faellt in `widgetDayPlan()`, damit sie ohne Browser pruefbar
+  // bleibt; hier wird nur noch gezeichnet. Ein Tag ohne Stunden ist dort kein
+  // Abschnitt: abends steht der laufende Tag nicht mehr da, und die Planung
+  // muss dafuer nichts ueber die Uhr wissen.
+  const plan = widgetDayPlan(size, days);
+
+  if (!plan.days.length) {
     container.insertAdjacentHTML('afterbegin', header(title, 0) + emptyState());
     return;
   }
 
-  // Wie viel von diesem Tag auf die Kachel passt - und in welcher Fassung. Die
-  // Entscheidung faellt in `widgetRowPlan()`, damit sie ohne Browser pruefbar
-  // bleibt; hier wird nur noch gezeichnet.
-  const { dense, cap, more } = widgetRowPlan(size, lessons.length);
-  const shown = lessons.slice(0, cap);
-  const day = dayLabel(target, { weekday: 'long', day: 'numeric', month: 'long' });
-  const isTomorrow = target === tomorrow;
-  const note = isTomorrow
-    ? ''
-    : `<p class="school-widget__note">${esc(t('extensions.school-planner.tomorrow.freeTomorrow'))}</p>`;
+  const lessonsOf = new Map(days.map((day) => [day.key, day.lessons]));
+  // Die Badge im Kopf zaehlt ALLE Stunden der gezeigten Tage und nicht die
+  // sichtbaren: sonst verspraeche "5" einen kurzen Tag, den es nicht gibt. Was
+  // die Kachel nicht zeigt, nennt die Tageszeile daneben.
+  const total = plan.days.reduce((sum, day) => sum + day.cap + day.more, 0);
+  const sections = plan.days.map((day) => {
+    const shown = (lessonsOf.get(day.key) ?? []).slice(0, day.cap);
+    return `<p class="school-widget__day">
+        <span class="school-widget__day-name">${esc(dayName(day.key, { today, tomorrow }))}</span>
+        ${day.more > 0 ? `<span class="school-widget__day-more">${esc(t('extensions.school-planner.widgets.moreShort', { rest: day.more }))}</span>` : ''}
+      </p>
+      <ul class="school-widget__list">${shown.map((lesson) => lessonRow(lesson, plan.dense)).join('')}</ul>`;
+  }).join('');
 
-  // Die Badge im Kopf zaehlt ALLE Stunden des Tages und nicht die gezeigten:
-  // sonst verspraeche "5" einen kurzen Tag, den es nicht gibt. Was die Kachel
-  // nicht zeigt, nennt die Zeile darunter.
-  container.insertAdjacentHTML('afterbegin', header(title, lessons.length) + `
+  container.insertAdjacentHTML('afterbegin', header(title, total) + `
     <div class="widget__body school-widget">
-      <p class="school-widget__day">${esc(day)}</p>
-      ${note}
-      <ul class="school-widget__list">${shown.map((lesson) => lessonRow(lesson, dense)).join('')}</ul>
-      ${more > 0 ? `<p class="school-widget__more">${esc(t('extensions.school-planner.widgets.more', { rest: more }))}</p>` : ''}
+      ${sections}
     </div>`);
 }

@@ -439,19 +439,35 @@
   gap: var(--space-1);
 }
 
+/* Die Tageszeile traegt zwei Angaben: links, welcher Tag das ist, rechts die
+ * Zahl der Stunden, die nicht mehr darauf passen. Die Mehr-Zahl steht HIER und
+ * nicht in einer eigenen Zeile darunter: die Kachel zeigt zwei Tage, und zwei
+ * zusaetzliche Zeilen kosten genau die Stunden, die sie zaehlen. */
 .school-widget__day {
   margin: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
   font-size: var(--text-sm);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
 }
 
-/* "Morgen ist frei, der Plan ist von Montag" - dieselbe Ausnahme wie auf der
- * Seite, nur leiser: die Kachel hat keine Flaeche fuer einen Kasten. */
-.school-widget__note {
-  margin: 0;
+/* Gekuerzt wird der Tagesname und nicht die Zahl: "Montag, 24. September" ist
+ * die Angabe, die man auch aus "Mo..." noch erraet. */
+.school-widget__day-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.school-widget__day-more {
+  flex: 0 0 auto;
   font-size: var(--text-xs);
-  color: var(--color-warning-ink);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-tertiary);
 }
 
 .school-widget__list {
@@ -515,12 +531,6 @@
   color: var(--color-text-tertiary);
   overflow: visible;
   text-overflow: clip;
-}
-
-.school-widget__more {
-  margin: 0;
-  font-size: var(--text-xs);
-  color: var(--color-text-tertiary);
 }
 
 /* Die Kachel laedt dieses Stylesheet selbst nach (siehe widgets/tomorrow.js),

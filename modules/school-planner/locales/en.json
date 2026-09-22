@@ -80,11 +80,13 @@
   "error.noPlan": "No timetable found",
   "error.noPupil": "No person selected",
 
-  "widgets.tomorrow": "Lessons tomorrow",
+  "widgets.tomorrow": "Lessons today and tomorrow",
+  "widgets.dayToday": "Today",
+  "widgets.dayTomorrow": "Tomorrow",
   "widgets.all": "All",
   "widgets.allLessons": "{{name}}: show the whole timetable",
   "widgets.notSetUp": "No timetable set up yet.",
   "widgets.setUp": "Set up",
   "widgets.free": "No lessons in the next three weeks.",
-  "widgets.more": "… and {{rest}} more"
+  "widgets.moreShort": "+{{rest}}"
 }

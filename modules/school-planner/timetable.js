@@ -642,6 +642,27 @@ export function nextLesson(lessons, nowMinutes) {
   }) ?? null;
 }
 
+/**
+ * Die Stunden, die noch nicht vorbei sind.
+ *
+ * `nextLesson()` sucht die naechste BEGINNENDE Stunde - fuer "was kommt als
+ * Naechstes" ist das richtig, fuer "was steht heute noch an" nicht: eine Stunde,
+ * die gerade laeuft, ist nicht vorbei. Verglichen wird deshalb mit dem ENDE.
+ *
+ * Was keine Uhrzeit hat, bleibt stehen. Eine Stunde ohne Zeit ist keine
+ * vergangene Stunde, und sie stillschweigend zu verschweigen waere genau der
+ * Fehler, den diese Kachel nicht machen darf. Ist die Uhr unbekannt (`null`),
+ * bleibt alles stehen - lieber ein ganzer Tag als ein leerer aus Versehen.
+ */
+export function remainingLessons(lessons, nowMinutes) {
+  const now = Number(nowMinutes);
+  if (!Number.isFinite(now)) return [...(lessons ?? [])];
+  return (lessons ?? []).filter((lesson) => {
+    const end = minutesOfTime(lesson?.endTime);
+    return end === null || end > now;
+  });
+}
+
 /** Eine Stunde als Textzeile: "1. Stunde - Mathematik (B204)". */
 export function lessonSummary(lesson) {
   const parts = [];
@@ -671,6 +692,17 @@ const CORE_ROWS_SHORT = 3;
 const CORE_ROWS_TALL = 5;
 
 /**
+ * Die Hoehe der Kachel in Rasterzeilen - "2x3" sind drei.
+ *
+ * Alles, was der Kern nicht kennt, faellt auf dieselbe flache Vorgabe zurueck
+ * wie `listRowCap()`: `String(size ?? '1x1')`. Die Breite wird nirgends
+ * gebraucht; eine breitere Kachel macht die Zeile laenger, nicht zahlreicher.
+ */
+function gridRows(size) {
+  return Number(String(size ?? '1x1').split('x')[1]) || 1;
+}
+
+/**
  * Wie viele Stunden die Dashboard-Kachel traegt - und wie viele, wenn sie dicht
  * schreibt.
  *
@@ -683,10 +715,10 @@ const CORE_ROWS_TALL = 5;
  *
  * Gerechnet wird deshalb aus dem Raster selbst. Eine Rasterzeile ist 132px hoch
  * (`grid-auto-rows: minmax(132px, auto)`), zwischen zwei Zeilen liegen 20px
- * (`--space-5`), und von der Kachel gehen Kopf, Innenabstand und die Tageszeile
- * ab. Der Rest wird durch die Hoehe einer Zeile geteilt - einmal durch die
- * zweizeilige (40px), einmal durch die einzeilige (24px), die dann entsteht,
- * wenn die Kachel dicht schreibt.
+ * (`--space-5`), und von der Kachel gehen Kopf, Innenabstand und je Abschnitt
+ * eine Tageszeile ab. Der Rest wird durch die Hoehe einer Zeile geteilt - einmal
+ * durch die zweizeilige (40px), einmal durch die einzeilige (24px), die dann
+ * entsteht, wenn die Kachel dicht schreibt.
  *
  * Zwei Regeln halten das Ergebnis brauchbar:
  *
@@ -695,52 +727,99 @@ const CORE_ROWS_TALL = 5;
  *   einer Rasterzeile ist der Platz rechnerisch knapp, aber der Deckel des Kerns
  *   ist dort die bestehende Zusage und nicht meine, sie zu kuerzen. Fuer
  *   `compact` gilt sie nicht: einzeilige Zeilen sind nur dann besser, wenn es
- *   dadurch MEHR werden, und das entscheidet `widgetRowPlan()`.
+ *   dadurch MEHR werden, und das entscheidet `widgetDayPlan()`.
+ *   Sie gilt fuer EINEN Abschnitt. Zwei Tage sind etwas, das der Kern gar nicht
+ *   kennt, und seine Zeilen sind nicht auf zwei Tageszeilen gerechnet: statt des
+ *   Deckels bleibt dort eine Zeile je Abschnitt, damit der zweite Tag nicht
+ *   zugunsten des ersten verschwindet.
  * - **Lieber eine Zeile zu wenig als eine, die abgeschnitten wird.** Die
  *   Rasterzeilen wachsen mit ihrem Inhalt (`minmax(132px, auto)`), gemessen wird
  *   erst im Browser, und eine Zeilenzahl, die vom Messzeitpunkt abhaengt,
  *   springt beim Laden. Die Rechnung ist deshalb eine Schaetzung, die absichtlich
  *   rundet.
  */
-export function widgetRowBudget(size) {
-  const rows = Number(String(size ?? '1x1').split('x')[1]) || 1;
+export function widgetRowBudget(size, { sections = 1 } = {}) {
+  const rows = gridRows(size);
   const core = rows >= 2 ? CORE_ROWS_TALL : CORE_ROWS_SHORT;
-  const listPx = rows * GRID_ROW_PX + (rows - 1) * GRID_GAP_PX - WIDGET_CHROME_PX - DAY_LINE_PX;
+  const listPx = rows * GRID_ROW_PX + (rows - 1) * GRID_GAP_PX - WIDGET_CHROME_PX - sections * DAY_LINE_PX;
+  const floor = sections > 1 ? sections : core;
   return {
-    full: Math.max(core, Math.floor(listPx / ROW_FULL_PX)),
+    full: Math.max(floor, Math.floor(listPx / ROW_FULL_PX)),
     compact: Math.floor(listPx / ROW_DENSE_PX),
   };
 }
 
 /**
- * Was die Kachel von einem Tag zeigt: wie viele Zeilen, und in welcher Fassung.
+ * Wie viele Zeilen jeder Tag bekommt.
  *
- * Die zweite Haelfte der Entscheidung, und die einzige Stelle, an der sie
- * getroffen wird - der Aufrufer zeichnet nur noch. Drei Regeln:
+ * Der erste Tag nimmt, was er braucht, und laesst dem zweiten eine Zeile - aber
+ * nur, wenn der zweite ueberhaupt Stunden hat. Ohne diese Reservierung frasse
+ * ein voller Tag auf einer kleinen Kachel den naechsten Restlos: acht Stunden
+ * gegen einen Deckel von acht Zeilen hiesse dann, dass morgen gar nicht
+ * vorkommt, obwohl der Platz fuer eine Zeile da war.
+ */
+function splitRows(budget, counts) {
+  const caps = counts.map(() => 0);
+  let left = budget;
+  for (let index = 0; index < counts.length; index += 1) {
+    const reserved = counts.slice(index + 1).filter((count) => count > 0).length;
+    const room = left - reserved;
+    caps[index] = room > 0 ? Math.min(counts[index], room) : 0;
+    left -= caps[index];
+  }
+  return caps;
+}
+
+/**
+ * Was die Kachel von welchem Tag zeigt: wie viele Zeilen je Tag, und in welcher
+ * Fassung.
+ *
+ * Die einzige Stelle, an der diese Entscheidung faellt - der Aufrufer zeichnet
+ * nur noch. `days` kommt in Anzeigereihenfolge und OHNE leere Tage: die Kachel
+ * zeigt den laufenden Tag und danach den naechsten, an dem Unterricht steht, und
+ * ein Tag ohne Stunden ist keiner von beiden. Genau daran haengt der Wechsel im
+ * Tageslauf, und er braucht hier keine Uhr: was heute vorbei ist, hat der Aufrufer
+ * mit `remainingLessons()` schon weggenommen, und was danach leer bleibt, faellt
+ * an dieser Zeile heraus.
+ *
+ * Vier Regeln:
  *
  * - **Dicht nur, wenn es mehr Zeilen gibt.** Auf einem Feld mit einer
  *   Rasterzeile ist der Platz so knapp, dass die einzeilige Fassung rechnerisch
  *   kuerzer waere als die zweizeilige Zusage des Kerns. Dann bleibt es bei der
  *   alten Anzeige, statt fuer eine gewonnene Zeile den Raum ueberall zu
- *   verlieren.
- * - **Die Zeile "3 weitere" braucht selbst Platz.** Passt der Tag auch dicht
- *   nicht, wird eine Zeile des Deckels fuer sie freigehalten: ohne diesen Abzug
- *   schoebe die Mehr-Zeile die letzte Stunde aus der Kachel, und weil `.widget`
- *   abschneidet, lautlos. Freigehalten wird nur, wo der Deckel aus dem Raster
- *   kommt - auf einem flachen Feld ist er die Zusage des Kerns (3 Zeilen), und
- *   die wird nicht gekuerzt, auch wenn dort ohnehin kaum eine Zeile sichtbar
- *   ist. Die Mehr-Zeile steht dort trotzdem: verschwiegen wird nichts.
+ *   verlieren. Verglichen wird die Summe ueber alle Tage: dicht schreiben lohnt
+ *   sich, wenn dadurch MEHR Stunden dastehen - und genau das ist der Fall, in
+ *   dem ein zweiter Tag ueberhaupt erst Platz findet.
+ * - **Zwei Tage brauchen zwei Rasterzeilen Hoehe.** Auf einer flachen Kachel
+ *   bleibt es bei einem Tag. Dort ist eine Zeile die ganze Kachel; sie in zwei
+ *   Abschnitte zu teilen nimmt beiden die Tageszeile und zeigt am Ende weniger
+ *   als vorher.
  * - **Nie mehr Zeilen als Stunden.** `cap` ist der Deckel, nicht die Anzeige -
  *   ein Tag mit vier Stunden bekommt vier Zeilen, auch wenn fuenf passen.
+ * - **Die Mehr-Zahl steht in der Tageszeile.** Deshalb wird keine Zeile mehr
+ *   fuer sie freigehalten: "Heute · 3 weitere" kostet keine Stunde, und die
+ *   freigewordene Zeile zeigt eine.
  *
- * `more` ist die Zahl, die die Mehr-Zeile nennt, und `0`, wenn alles dasteht.
+ * `more` ist die Zahl, die dort genannt wird, und `0`, wenn alles dasteht.
  */
-export function widgetRowPlan(size, lessonCount) {
-  const { full, compact } = widgetRowBudget(size);
-  const count = Math.max(0, Number(lessonCount) || 0);
-  const dense = count > full && compact > full;
-  const budget = dense ? compact : full;
-  const overflow = count > budget;
-  const cap = overflow && dense ? Math.max(1, budget - 1) : Math.min(count, budget);
-  return { dense, cap, more: count - cap };
+export function widgetDayPlan(size, days) {
+  const list = (days ?? []).filter((day) => (day?.lessons ?? []).length > 0);
+  if (!list.length) return { dense: false, days: [] };
+  const sections = list.length > gridRows(size) ? 1 : list.length;
+  const counts = list.slice(0, sections).map((day) => day.lessons.length);
+  const { full, compact } = widgetRowBudget(size, { sections });
+  const wide = splitRows(full, counts);
+  const narrow = splitRows(compact, counts);
+  const total = (caps) => caps.reduce((sum, cap) => sum + cap, 0);
+  const dense = total(narrow) > total(wide);
+  const caps = dense ? narrow : wide;
+  return {
+    dense,
+    days: list.slice(0, sections).map((day, index) => ({
+      key: day.key,
+      cap: caps[index],
+      more: counts[index] - caps[index],
+    })),
+  };
 }

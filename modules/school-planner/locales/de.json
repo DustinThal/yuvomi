@@ -80,11 +80,13 @@
   "error.noPlan": "Kein Plan vorhanden",
   "error.noPupil": "Keine Person ausgewählt",
 
-  "widgets.tomorrow": "Stunden morgen",
+  "widgets.tomorrow": "Stunden heute und morgen",
+  "widgets.dayToday": "Heute",
+  "widgets.dayTomorrow": "Morgen",
   "widgets.all": "Alle",
   "widgets.allLessons": "{{name}}: ganzen Plan zeigen",
   "widgets.notSetUp": "Noch kein Stundenplan angelegt.",
   "widgets.setUp": "Einrichten",
   "widgets.free": "Kein Unterricht in den nächsten drei Wochen.",
-  "widgets.more": "… und {{rest}} mehr"
+  "widgets.moreShort": "+{{rest}}"
 }

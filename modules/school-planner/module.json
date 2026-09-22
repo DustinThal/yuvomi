@@ -3,7 +3,7 @@
   "id": "school-planner",
   "name": "Stundenplan",
   "version": "1.2.1",
-  "description": "Stundenplan als echtes Wochenraster, mit den Stunden des naechsten Tages zum Vorbereiten.",
+  "description": "Stundenplan als echtes Wochenraster, mit den Stunden von heute und morgen zum Vorbereiten.",
   "entry": "index.js",
   "style": "style.css",
   "icon": "graduation-cap",
@@ -33,7 +33,7 @@
       "widgets": [
         {
           "id": "tomorrow",
-          "label": "Stunden morgen",
+          "label": "Stunden heute und morgen",
           "labelKey": "widgets.tomorrow"
         }
       ]
@@ -42,7 +42,7 @@
       {
         "id": "tomorrow",
         "entry": "widgets/tomorrow.js",
-        "label": "Stunden morgen",
+        "label": "Stunden heute und morgen",
         "labelKey": "widgets.tomorrow",
         "icon": "graduation-cap",
         "defaultSize": "2x2",
