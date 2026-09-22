@@ -177,10 +177,20 @@
 
 /* Das Raster ist die eine Flaeche, die breiter sein darf als der Text: sieben
  * Spalten lassen sich auf einem Telefon nicht umbrechen. Deshalb scrollt der
- * Rasterbereich fuer sich und nicht die Seite. */
+ * Rasterbereich fuer sich und nicht die Seite.
+ *
+ * `table-layout: fixed` ist hier kein Feinschliff: ohne es verteilt der Browser
+ * die Breite nach dem INHALT, und eine Woche, in der nur ein Tag einen Raum und
+ * einen Lehrer traegt, bekommt genau dort die breite Spalte - die Tage stehen
+ * dann unterschiedlich breit nebeneinander, obwohl alle sieben gleich viel Zeit
+ * des Tages zeigen. Mit fester Verteilung bekommt jede Spalte denselben Anteil,
+ * die erste (die Uhrzeiten) ihren festen Wert aus `.school-grid__corner`.
+ * Lange Woerter brechen um (`.school-slot` hat `overflow-wrap`), statt die
+ * Spalte zu sprengen. */
 .school-grid {
   border-collapse: separate;
   border-spacing: var(--space-1);
+  table-layout: fixed;
   width: 100%;
   min-width: 40rem;
 }

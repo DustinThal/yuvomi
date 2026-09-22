@@ -466,6 +466,32 @@ test('die einzeilige Fassung laesst den Raum nicht fallen', () => {
   assert.match(rule[1], /overflow: visible/, 'die dichte Zeile kuerzt fuer sich statt mit dem Fach');
 });
 
+test('alle sieben Tage sind gleich breit', () => {
+  // Der gemeldete Fehler: eine Woche, in der nur ein Tag einen Raum und einen
+  // Lehrer trug, bekam genau dort die breite Spalte - ohne feste Verteilung
+  // rechnet der Browser die Breite aus dem Inhalt. Alle sieben Tage zeigen
+  // gleich viel Zeit des Tages, also sollen sie gleich viel Platz bekommen.
+  const css = read('style.css').replace(/\r\n/g, '\n');
+  const grid = /(?:^|\n)\.school-grid\s*\{([\s\S]*?)\n\}/.exec(css);
+  assert.ok(grid, 'die Regel .school-grid fehlt');
+  assert.match(grid[1], /table-layout:\s*fixed/,
+    'ohne table-layout: fixed verteilt der Browser die Breite nach dem Inhalt');
+  // Feste Verteilung heisst: was nicht passt, wird abgeschnitten - es sei denn,
+  // die Zelle bricht um. Genau das ist die Bedingung, unter der die Regel
+  // ueberhaupt erlaubt ist.
+  const slot = /(?:^|\n)\.school-slot\s*\{([\s\S]*?)\n\}/.exec(css);
+  assert.ok(slot, 'die Regel .school-slot fehlt');
+  assert.match(slot[1], /overflow-wrap:\s*anywhere/,
+    'feste Spalten ohne Umbruch schneiden lange Faecher ab');
+  // Und die Zeitspalte behaelt ihre eigene Breite: sie traegt "08:00 - 08:45"
+  // und nicht den siebten Teil. `auto` waere genau die Verteilung nach Inhalt,
+  // die hier nicht gelten soll.
+  const corner = /(?:^|\n)\.school-grid__corner\s*\{([\s\S]*?)\n\}/.exec(css);
+  assert.ok(corner, 'die Regel .school-grid__corner fehlt');
+  assert.match(corner[1], /width:\s*[0-9.]+(rem|em|px|ch)/,
+    'die Zeitspalte hat keine feste Breite mehr');
+});
+
 test('die Kachel rechnet mit den echten Rastermassen des Kerns', () => {
   // `widgetRowBudget()` nennt zwei Zahlen aus dem Kern: die Hoehe einer
   // Rasterzeile (132px, `grid-auto-rows` in dashboard.css) und den Abstand
