@@ -129,6 +129,7 @@
         "todayMeals": "Dagens måltider",
         "todayTitle": "Viktigt idag",
         "todayTask": "Uppgift",
+        "todayTaskStarted": "Uppgift · påbörjad",
         "todayEvent": "Händelse",
         "todayShopping": "Inköp",
         "todayShoppingCount": "{{count}} öppna",
@@ -509,7 +510,10 @@
         "historyTickedBy": "bockad av {{name}}",
         "reminderLockedNeedsDueDate": "Den här uppgiften har en påminnelse som du inte får ändra. Därför behövs ett slutdatum.",
         "kanbanColCollapse": "Fäll ihop kolumnen",
-        "kanbanColExpand": "Fäll ut kolumnen"
+        "kanbanColExpand": "Fäll ut kolumnen",
+        "kanbanArchiveDone": "Arkivera allt klart",
+        "kanbanArchiveDoneConfirm": "Arkivera alla klara uppgifter i den här kolumnen?",
+        "kanbanArchiveDoneAction": "Arkivera"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} måltider",
@@ -630,7 +634,9 @@
         "duplicateKeepQuantities": "Behåll mängder",
         "duplicateKeepNotes": "Behåll anteckningar och länkar",
         "duplicateSubmit": "Duplicera",
-        "duplicateError": "Listan kunde inte dupliceras."
+        "duplicateError": "Listan kunde inte dupliceras.",
+        "itemStateChecked": "avbockad",
+        "itemStateOpen": "inte avbockad"
     },
     "meals": {
         "randomizeSuccess_few": "{{count}} måltider planerade.",
@@ -2769,7 +2775,21 @@
         "healthPreventionKind": {
             "vaccination": "Vaccination",
             "checkup": "Kontroll"
-        }
+        },
+        "backupRestoreKeyLabel": "Säkerhetskopians nyckel",
+        "backupRestoreKeyHint": "Den här säkerhetskopian kommer från en annan installation. Ange dess DB_ENCRYPTION_KEY: den används bara för den här återställningen och sparas inte, därefter krypteras datan med den här installationens nyckel.",
+        "backupRestoreKeyHttpWarning": "Sidan är inte öppnad via HTTPS: nyckeln skickas okrypterad över nätverket.",
+        "otherSessionsTitle": "Andra enheter",
+        "otherSessionsHint": "Loggar ut ditt konto på alla andra enheter och webbläsare. Den här enheten förblir inloggad. API-token och kopplade väggskärmar påverkas inte.",
+        "otherSessionsButton": "Logga ut på andra enheter",
+        "otherSessionsConfirm": "Logga ut på alla andra enheter?",
+        "otherSessionsConfirmDetail": "Den som är inloggad där med ditt konto måste logga in igen. Den här enheten förblir inloggad.",
+        "otherSessionsEnded": "{{count}} andra sessioner avslutade.",
+        "otherSessionsEnded_one": "{{count}} annan session avslutad.",
+        "otherSessionsEnded_few": "{{count}} andra sessioner avslutade.",
+        "otherSessionsNone": "Ditt konto var inte inloggat på någon annan enhet.",
+        "otherSessionsError": "Det gick inte att logga ut på andra enheter.",
+        "otherSessionsTooManyAttempts": "För många förfrågningar. Vänta en stund och försök sedan igen."
     },
     "login": {
         "tagline": "Välkommen tillbaka till din familjeplanerare.",
@@ -2979,6 +2999,7 @@
         "nameDayClear": "Ta bort namnsdag",
         "nameDayHint": "Använder samma påminnelse som födelsedagen.",
         "nameDayIncomplete": "Välj månad och dag för namnsdagen.",
+        "reminderAmountInvalid": "Ange ett heltal från 1 till {{max}} för den egna påminnelsen.",
         "reminderOnDay": "Samma dag",
         "reminderBefore": "{{duration}} innan",
         "reminderAfterNoon": "{{duration}} efter klockan 12",
@@ -3176,6 +3197,7 @@
         "folderDeleteContentsChangedToast": "Mappens innehåll ändrades under borttagningen, så mappen behölls. Borttagna dokument: {{deleted}}.",
         "folderDeleteContentsChangedWithFailuresToast": "Mappens innehåll ändrades och vissa dokument kunde inte tas bort. Mappen behölls.",
         "folderDeleteInProgressToast": "Mappen tas bort just nu. Försök igen när åtgärden är klar.",
+        "folderDeleteNotManageableToast": "Inget togs bort. Mappen innehåller nu dokument som du inte får ta bort.",
         "housekeepingFolder": "Städning",
         "calendarItemsFolder": "Kalenderobjekt",
         "folderBrowserTitle": "Mappar",
@@ -3546,7 +3568,8 @@
         "currentMonth": "Nuvarande",
         "noVisitReportsInMonth": "Inga personalbesök registrerades under {{month}}.",
         "settledAdminOnly": "Bara en admin kan ändra eller ta bort",
-        "reportVisitsCount": "Besök"
+        "reportVisitsCount": "Besök",
+        "receiptPresent": "Bifogat"
     },
     "userMultiSelect": {
         "moreUsers": "mer",
@@ -5450,7 +5473,8 @@
         "confirmSelection": "Lägg till valda",
         "openAction": "Öppna {{name}}",
         "limitReached": "Högst {{count}} dokument.",
-        "limitReached_one": "Högst {{count}} dokument."
+        "limitReached_one": "Högst {{count}} dokument.",
+        "presentHidden": "Bifogat"
     },
     "join": {
         "title": "Skapa ditt konto",

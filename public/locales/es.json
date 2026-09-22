@@ -129,6 +129,7 @@
         "todayMeals": "Comidas de hoy",
         "todayTitle": "Importante hoy",
         "todayTask": "Tarea",
+        "todayTaskStarted": "Tarea · empezada",
         "todayEvent": "Evento",
         "todayShopping": "Compra",
         "todayShoppingCount": "{{count}} pendientes",
@@ -509,7 +510,10 @@
         "historyTickedBy": "marcado por {{name}}",
         "reminderLockedNeedsDueDate": "Esta tarea tiene un recordatorio que no puedes cambiar. Por eso necesita una fecha de vencimiento.",
         "kanbanColCollapse": "Contraer columna",
-        "kanbanColExpand": "Expandir columna"
+        "kanbanColExpand": "Expandir columna",
+        "kanbanArchiveDone": "Archivar todo lo hecho",
+        "kanbanArchiveDoneConfirm": "¿Archivar todas las tareas hechas de esta columna?",
+        "kanbanArchiveDoneAction": "Archivar"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} comidas",
@@ -630,7 +634,9 @@
         "duplicateKeepQuantities": "Mantener cantidades",
         "duplicateKeepNotes": "Mantener notas y enlaces",
         "duplicateSubmit": "Duplicar",
-        "duplicateError": "No se pudo duplicar la lista."
+        "duplicateError": "No se pudo duplicar la lista.",
+        "itemStateChecked": "marcado",
+        "itemStateOpen": "sin marcar"
     },
     "meals": {
         "randomizeSuccess_few": "{{count}} comidas planificadas.",
@@ -2769,7 +2775,21 @@
         "healthPreventionKind": {
             "vaccination": "Vacuna",
             "checkup": "Revisión"
-        }
+        },
+        "backupRestoreKeyLabel": "Clave de la copia de seguridad",
+        "backupRestoreKeyHint": "Esta copia de seguridad procede de otra instalación. Introduce su DB_ENCRYPTION_KEY: solo se usa para esta restauración y no se guarda; después, los datos quedan cifrados con la clave de esta instalación.",
+        "backupRestoreKeyHttpWarning": "Esta página no está abierta por HTTPS: la clave viajará por la red sin cifrar.",
+        "otherSessionsTitle": "Otros dispositivos",
+        "otherSessionsHint": "Cierra la sesión de tu cuenta en todos los demás dispositivos y navegadores. Este dispositivo sigue con la sesión iniciada. Los tokens de API y las pantallas de pared vinculadas no se ven afectados.",
+        "otherSessionsButton": "Cerrar sesión en otros dispositivos",
+        "otherSessionsConfirm": "¿Cerrar sesión en todos los demás dispositivos?",
+        "otherSessionsConfirmDetail": "Quien haya iniciado sesión allí con tu cuenta tendrá que volver a iniciarla. Este dispositivo sigue con la sesión iniciada.",
+        "otherSessionsEnded": "{{count}} sesiones más cerradas.",
+        "otherSessionsEnded_one": "{{count}} sesión más cerrada.",
+        "otherSessionsEnded_few": "{{count}} sesiones más cerradas.",
+        "otherSessionsNone": "Tu cuenta no tenía la sesión iniciada en ningún otro dispositivo.",
+        "otherSessionsError": "No se pudo cerrar la sesión en otros dispositivos.",
+        "otherSessionsTooManyAttempts": "Demasiadas solicitudes. Espera un momento y vuelve a intentarlo."
     },
     "login": {
         "tagline": "Bienvenido de nuevo a tu planificador familiar.",
@@ -2979,6 +2999,7 @@
         "nameDayClear": "Quitar la onomástica",
         "nameDayHint": "Usa el mismo recordatorio que el cumpleaños.",
         "nameDayIncomplete": "Selecciona el mes y el día de la onomástica.",
+        "reminderAmountInvalid": "Introduce un número entero del 1 al {{max}} para el recordatorio personalizado.",
         "reminderOnDay": "El mismo día",
         "reminderBefore": "{{duration}} antes",
         "reminderAfterNoon": "{{duration}} después de las 12:00",
@@ -3176,6 +3197,7 @@
         "folderDeleteContentsChangedToast": "El contenido de la carpeta cambió durante la eliminación, por lo que se conservó. Documentos eliminados correctamente: {{deleted}}.",
         "folderDeleteContentsChangedWithFailuresToast": "El contenido de la carpeta cambió y algunos documentos no pudieron eliminarse. La carpeta se conservó.",
         "folderDeleteInProgressToast": "Esta carpeta se está eliminando. Inténtalo de nuevo cuando termine la operación.",
+        "folderDeleteNotManageableToast": "No se ha eliminado nada. Esta carpeta ahora contiene documentos que no puedes eliminar.",
         "housekeepingFolder": "Limpieza",
         "calendarItemsFolder": "Elementos del calendario",
         "folderBrowserTitle": "Carpetas",
@@ -3546,7 +3568,8 @@
         "currentMonth": "Este mes",
         "noVisitReportsInMonth": "No se registró ningún servicio en {{month}}.",
         "settledAdminOnly": "Solo un administrador puede modificarlo o eliminarlo",
-        "reportVisitsCount": "Visitas"
+        "reportVisitsCount": "Visitas",
+        "receiptPresent": "Adjunto"
     },
     "userMultiSelect": {
         "moreUsers": "más",
@@ -5450,7 +5473,8 @@
         "confirmSelection": "Añadir selección",
         "openAction": "Abrir {{name}}",
         "limitReached": "Como máximo {{count}} documentos.",
-        "limitReached_one": "Como máximo {{count}} documento."
+        "limitReached_one": "Como máximo {{count}} documento.",
+        "presentHidden": "Adjunto"
     },
     "join": {
         "title": "Configura tu cuenta",

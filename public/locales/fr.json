@@ -129,6 +129,7 @@
         "todayMeals": "Repas du jour",
         "todayTitle": "Important aujourd’hui",
         "todayTask": "Tâche",
+        "todayTaskStarted": "Tâche · commencée",
         "todayEvent": "Événement",
         "todayShopping": "Courses",
         "todayShoppingCount": "{{count}} ouverts",
@@ -509,7 +510,10 @@
         "historyTickedBy": "coché par {{name}}",
         "reminderLockedNeedsDueDate": "Cette tâche a un rappel que vous n’êtes pas autorisé à modifier. Elle a donc besoin d’une date d’échéance.",
         "kanbanColCollapse": "Réduire la colonne",
-        "kanbanColExpand": "Agrandir la colonne"
+        "kanbanColExpand": "Agrandir la colonne",
+        "kanbanArchiveDone": "Archiver tout ce qui est terminé",
+        "kanbanArchiveDoneConfirm": "Archiver toutes les tâches terminées de cette colonne ?",
+        "kanbanArchiveDoneAction": "Archiver"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} repas",
@@ -630,7 +634,9 @@
         "duplicateKeepQuantities": "Conserver les quantités",
         "duplicateKeepNotes": "Conserver notes et liens",
         "duplicateSubmit": "Dupliquer",
-        "duplicateError": "La liste n'a pas pu être dupliquée."
+        "duplicateError": "La liste n'a pas pu être dupliquée.",
+        "itemStateChecked": "coché",
+        "itemStateOpen": "non coché"
     },
     "meals": {
         "randomizeSuccess_few": "{{count}} repas planifiés.",
@@ -2769,7 +2775,21 @@
         "healthPreventionKind": {
             "vaccination": "Vaccin",
             "checkup": "Bilan"
-        }
+        },
+        "backupRestoreKeyLabel": "Clé de la sauvegarde",
+        "backupRestoreKeyHint": "Cette sauvegarde provient d'une autre installation. Saisissez sa DB_ENCRYPTION_KEY : elle sert uniquement à cette restauration et n'est pas enregistrée ; ensuite, les données sont chiffrées avec la clé de cette installation.",
+        "backupRestoreKeyHttpWarning": "Cette page n'est pas ouverte en HTTPS : la clé transitera sur le réseau sans chiffrement.",
+        "otherSessionsTitle": "Autres appareils",
+        "otherSessionsHint": "Déconnecte ton compte de tous les autres appareils et navigateurs. Cet appareil reste connecté. Les jetons API et les écrans muraux associés ne sont pas concernés.",
+        "otherSessionsButton": "Se déconnecter des autres appareils",
+        "otherSessionsConfirm": "Se déconnecter de tous les autres appareils ?",
+        "otherSessionsConfirmDetail": "Toute personne connectée là-bas avec ton compte devra se reconnecter. Cet appareil reste connecté.",
+        "otherSessionsEnded": "{{count}} autres sessions fermées.",
+        "otherSessionsEnded_one": "{{count}} autre session fermée.",
+        "otherSessionsEnded_few": "{{count}} autres sessions fermées.",
+        "otherSessionsNone": "Ton compte n’était connecté sur aucun autre appareil.",
+        "otherSessionsError": "La déconnexion des autres appareils a échoué.",
+        "otherSessionsTooManyAttempts": "Trop de requêtes. Patiente un instant, puis réessaie."
     },
     "login": {
         "tagline": "Bon retour sur votre planificateur familial.",
@@ -2979,6 +2999,7 @@
         "nameDayClear": "Supprimer la fête",
         "nameDayHint": "Utilise le même rappel que l’anniversaire.",
         "nameDayIncomplete": "Sélectionnez le mois et le jour de la fête.",
+        "reminderAmountInvalid": "Saisissez un nombre entier de 1 à {{max}} pour le rappel personnalisé.",
         "reminderOnDay": "Le jour même",
         "reminderBefore": "{{duration}} avant",
         "reminderAfterNoon": "{{duration}} après 12 h",
@@ -3176,6 +3197,7 @@
         "folderDeleteContentsChangedToast": "Le contenu du dossier a changé pendant la suppression ; le dossier a donc été conservé. Documents supprimés : {{deleted}}.",
         "folderDeleteContentsChangedWithFailuresToast": "Le contenu du dossier a changé et certains documents n’ont pas pu être supprimés. Le dossier a été conservé.",
         "folderDeleteInProgressToast": "Ce dossier est en cours de suppression. Réessayez une fois l’opération terminée.",
+        "folderDeleteNotManageableToast": "Rien n’a été supprimé. Ce dossier contient désormais des documents que vous n’êtes pas autorisé à supprimer.",
         "housekeepingFolder": "Ménage",
         "calendarItemsFolder": "Éléments du calendrier",
         "folderBrowserTitle": "Dossiers",
@@ -3546,7 +3568,8 @@
         "currentMonth": "Actuel",
         "noVisitReportsInMonth": "Aucune intervention enregistrée en {{month}}.",
         "settledAdminOnly": "Seul un admin peut la modifier ou la supprimer",
-        "reportVisitsCount": "Visites"
+        "reportVisitsCount": "Visites",
+        "receiptPresent": "Joint"
     },
     "userMultiSelect": {
         "moreUsers": "autres",
@@ -5450,7 +5473,8 @@
         "confirmSelection": "Ajouter la sélection",
         "openAction": "Ouvrir {{name}}",
         "limitReached": "{{count}} documents au maximum.",
-        "limitReached_one": "{{count}} document au maximum."
+        "limitReached_one": "{{count}} document au maximum.",
+        "presentHidden": "Joint"
     },
     "join": {
         "title": "Configurer votre compte",

@@ -9,6 +9,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **A backup from another installation can be restored without touching a shell.** A backup
+  carries the encryption of the installation that wrote it, so moving to a new server ended at
+  "could not be decrypted", and every way around it meant swapping files and keys by hand - on
+  Umbrel, where the key is fixed, there was none at all. When a backup does not open with this
+  installation's key, the restore dialog now asks for the old installation's `DB_ENCRYPTION_KEY`.
+  The backup is decrypted with it and re-encrypted with this installation's own key before it
+  replaces the database; the entered key is used only for that restore and is not stored. A wrong
+  key leaves everything as it was. An installation without a key of its own refuses, instead of
+  storing the backup decrypted, and over plain HTTP the dialog warns that the key crosses the
+  network unencrypted. API clients send the key as base64 in the `X-Backup-Key` header of
+  `POST /api/v1/backup/restore` (never in the URL), and `scripts/restore-backup.js` reads it from
+  stdin with `--backup-key-stdin`. See "Moving to a new server" in the installation guide. (#1267)
+
+- **You can sign out on your other devices.** Since a session now lasts 90 days without use, a lost
+  phone or a borrowed laptop could stay signed in for months, and signing out only ended the
+  session on the device you were using. Settings, Account, now has "Other devices" with a button
+  that ends every other session of your account after a confirmation, including ones started with
+  single sign-on; this device stays signed in, and the page says how many sessions were ended,
+  counting only ones that were still valid. Clicking it too often asks you to wait a moment; the
+  limit applies to each member separately, so one member cannot lock out another. API
+  tokens and paired wall displays are not sessions and keep working; they are revoked under API
+  tokens and Displays as before. For API clients: `POST /api/v1/auth/logout-others` needs a
+  browser session and a CSRF token, answers `{ ok: true, ended }`, and refuses an API token with
+  403. (#1354)
+
+- **API clients can fill only the empty slots of the meal plan.** `POST /api/v1/meals/apply-plan`
+  takes a new option `skip_occupied: true`. An assignment whose date and meal type already hold a
+  meal is then left out instead of being added next to it, and the answer lists it in `skipped` as
+  `{ index, date, meal_type, reason: "occupied" }`, where `index` is its position in `assignments`,
+  so an importer such as a Mealie meal-plan sync knows what did not land. A weekly recurring meal
+  occupies its slot even in a week nobody has opened yet, up to and including its last day; an
+  occurrence that was deleted or moved away does not. "Occupied" means before the call, so several
+  assignments for the same empty slot are all created. The option has to be a JSON boolean, and
+  combining it with `replace_existing` is refused with `400`. Without the option the endpoint
+  behaves and answers exactly as before. (Discussion #1380)
+
+- **Every done task on the board can be archived in one action.** The "Done" column of the board
+  now has an archive button next to its count. After a confirmation it moves the done tasks the
+  column currently shows into the archive - the ones it shows, so a task someone else completes
+  while the board is open stays where it is until you have seen it, and a search narrows what goes.
+  Their status stays done, and each one can still be brought back on its own. Archiving several
+  tasks from the list's selection mode now takes a single request as well: before, it sent one per
+  task, stopped at the first locked task or rate limit and then did not refresh, although the rest
+  had already been archived. Locked tasks you may not change are left out and the message says how
+  many. For API clients the new `POST /api/v1/tasks/archive` takes `{ ids }` (at most 500), applies
+  the same rules as archiving a single task in one transaction, skips tasks the caller cannot see,
+  and returns `{ archived, skipped }`. (#1250)
+
+- **The overview now says when a task has been started.** In "Today" a task used to read "Task"
+  whether anyone had begun it or not, so starting it from there left no trace on screen. A task in
+  progress now reads "Task · started", as text, so a screen reader announces it too, and the row
+  gets no wider on a phone. Where the tasks tile is switched on, a started task carries the same
+  amber ring as in the task list, and the status is read out with it. Open tasks look as before.
+  (#1251)
+
 - **The activity of a shared-expenses group now loads further with "Load more", down to its first
   entry.** Until now the activity showed the latest 12 entries and nothing before them, so an older
   payment could not be reversed from the interface. "Load more" appends the next entries below the
@@ -31,7 +86,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   shows what happened. To correct a payment, reverse it and record the right one. Group owners and
   admins can reverse any payment, everyone else the ones they recorded - the same rule as for
   editing an expense. Without write access to Budget, or in an archived group, the button is not
-  there, but the "reversed" mark is. The API has the same step as
+  there, but the "reversed" mark is. Deleting the account of whoever reversed a payment leaves it
+  reversed and the balances as they were. The API has the same step as
   `POST /api/v1/split-expenses/groups/{id}/settlements/{settlementId}/reverse`; reversing twice
   answers 409. (#1309)
 
@@ -106,8 +162,118 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   who may not see the pantry at all are not told which row it is - not in the page and not in the
   API's answer either. (#1314)
 
+### Changed
+
+- **You stay signed in as long as you open Yuvomi at least once every 90 days.** Until now every
+  browser was signed out seven days after signing in, even when it was used every day. The sign-in
+  now slides: each visit keeps it alive, and only a device that has not been used for 90 days has
+  to sign in again. The cookie is renewed at most every 12 hours, never on images, styles or other
+  static files, so the session id does not travel in responses a proxy might cache. There is no
+  setting and no "keep me signed in" checkbox; signing out still ends the session at once. Existing
+  sign-ins move to the 90 days on their next visit. (#1356)
+
 ### Fixed
 
+- **A housekeeping visit no longer gives away a receipt you may not see.** The housekeeping API
+  sent the file name and document number of a visit's receipt to everyone who could open the
+  housekeeping module, also to members without access to documents and when the receipt was a
+  private document of someone else. The page already hid the name without document access, but the
+  API still returned it. Name and number now come only when you may read that document, by the same
+  rule the documents module uses; otherwise the visit only says that it has a receipt, and the edit
+  dialog shows "Attached" instead of an upload field. Saving such a visit keeps the receipt: before,
+  saving it could silently remove someone else's private receipt, and it can no longer be replaced
+  or removed by someone who cannot see it. Linking a receipt now needs access to documents. For API
+  clients every visit and work session carries `has_receipt`; `receipt_document_id` and
+  `receipt_document_name` are `null` unless you may read the document, API tokens need a
+  `documents:read` scope for them, and `PUT /api/v1/housekeeping/visits/{id}` answers 403 when it
+  would replace a receipt you cannot see or link one without access to documents. (#1358)
+
+- **Receipts on budget entries, shared expenses and inventory items no longer name documents you
+  may not read.** Their API sent the file name and document number of every linked receipt to
+  anyone who could open the budget or the inventory, also to members without access to documents
+  and to API tokens without a documents scope. Without access to documents a receipt now only says
+  that it is there: the detail view shows "Attached" where the name was, and the inventory no
+  longer shows a link that leads nowhere or lists the document in an item's history. Linking a
+  receipt or a payment proof needs access to documents, and existing receipts stay when such a
+  member saves the entry. For API clients `attachments[].document_id`, `name`, `original_name`,
+  `mime_type` and `file_size` are `null` without access to the documents module (for API tokens a
+  `documents:read` scope), a settlement's `proof_document_id` is `null` unless you may read that
+  document, and a non-empty `attachment_document_ids` or a `proof_document_id` is answered with the
+  same 403 for every id. (#1358)
+
+- **A task no longer names or counts documents you may not read.** The tasks API sent the linked
+  documents of a task with their names, and the number of them, to everyone who could see the task,
+  also to members without access to documents and to API tokens without a documents scope. Without
+  access to documents a task now says nothing about its documents: no paperclip on the card, no
+  documents row in the detail view, and saving the task keeps its documents. For API clients
+  `document_count` and `documents` are `null` without access to the documents module (for API
+  tokens a `documents:read` scope) - `null` means "not told", not "none" -
+  `GET /api/v1/tasks/{id}/documents` answers 403, and
+  `PUT /api/v1/tasks/{id}/documents` answers the same 403 for every id in a non-empty
+  `document_ids`. (#1358)
+
+- **An edited shared expense keeps counting after the editor's account is deleted.** When a group
+  owner or admin edited someone else's expense and that editor's account was later deleted, the
+  expense stayed in the list but silently dropped out of every balance. Edits now leave the expense
+  tied to whoever created it, so it counts until it is deleted itself; the activity still shows who
+  edited it. Expenses edited this way before are corrected when the update starts. An expense whose
+  editor was already deleted before the update is not repaired: it still shows in the list without
+  counting in the balances. (#1309)
+
+- **An account created at the first single sign-on now gets its contact entry.** Every other way of
+  adding a household member - an invitation, the first setup, an admin creating the account - also
+  creates the member's contact, which holds the e-mail address the household uses, for example to
+  send a shopping list. An account created by the first OIDC sign-in had none. It now gets one with
+  its name and, if the identity provider marks the address as verified (`email_verified`), that
+  e-mail address. No picture, no birth date and no phone number are taken over, and later sign-ins
+  change nothing, so edits made in Yuvomi stay. (#1357)
+
+- **"To shopping list" only appears where it can work.** Since 2.68.0, sending ingredients from
+  the kitchen to the shopping list needs permission to change the shopping list, and taking over
+  the meal plan from inside the shopping list needs permission to change the meal plan. The buttons
+  did not know that yet: a family member who may only view the shopping list still saw the cart on a
+  meal, the "To shopping list" button in a recipe and the transfer section in the meal dialog, and
+  one who may only view the meal plan still saw "Import meal plan" in the list menu - each of them
+  ended in an error. They are now left out for anyone who lacks the permissions the action needs.
+
+- **A family member who may only view the meal plan can put a recipe on the shopping list.**
+  Sending a recipe's ingredients to the shopping list only reads the recipe, so it now needs
+  permission to view the meal plan and to change the shopping list, for members and for API tokens
+  alike. Sending a planned meal still needs permission to change the meal plan, because it marks
+  the meal's ingredients as transferred.
+
+- **A reminder no longer sits on top of a dialog's buttons and takes the click meant for them.**
+  When a reminder came due while a dialog was open, its message could lie exactly over "Save": on a
+  desktop screen the calendar dialog's Save, Cancel and Delete were all under it, and on a phone the
+  first row of the sheet's buttons or its close button. Clicking there dismissed the reminder and
+  saved nothing, without any message. While a dialog is open, messages at the bottom of the screen
+  now move out of the way of its title bar and buttons: above the dialog when there is room (on a
+  phone, the strip above the sheet), otherwise just above the dialog's buttons. This holds for the
+  welcome tour and for pickers inside a form, such as choosing a document, too. They always stay
+  on screen and can still be dismissed. (#1160)
+
+- **Deleting a folder no longer reveals activity on documents you cannot see.** Before deleting a
+  folder the app asks the server what the deletion would affect and sends that answer back with the
+  deletion, so nothing changes unnoticed in between. That answer was built over every document in
+  the folder, including private ones of other family members, so asking twice showed whether
+  something had happened to documents you are not allowed to see. It now covers only the documents
+  you can see. Deleting a folder together with its documents still refuses as long as it holds a
+  document you may not delete, and that refusal now comes before the "contents changed" message,
+  which only appears for changes you can see. If such a document arrives while the delete dialog is
+  open, the app now says in your language that nothing was deleted because the folder holds
+  documents you may not delete, instead of showing an English server message. Keeping the documents
+  and deleting only the folder no longer fails while someone else is deleting a single document in
+  it; that document just loses its folder and is then deleted as intended. For API clients the 403
+  of `DELETE /api/v1/documents/folders/{id}?documents=delete` carries the reason
+  `FOLDER_DOCUMENTS_NOT_MANAGEABLE`. (#1355)
+- **The API reference now describes `POST /api/v1/meals/apply-plan` as it behaves.** Since 2.52.0
+  it said that without `replace_existing` a slot that already has a meal is skipped. The endpoint
+  has never done that: it adds the new meals next to the ones already planned for the same date and
+  meal type. The description now says so, and that `replace_existing: true` first removes the meals
+  of exactly the date and meal type pairs named in the request, leaving every other slot alone. It
+  also lists the actual answers, `201` on success and `400` when an assignment is invalid, instead of
+  `200`. The endpoint itself is unchanged; a client that relied on the skip has to leave occupied
+  slots out of `assignments` itself, as the app does.
 - **Housekeeping tasks turn "due today" and "overdue" on the household's day, not the server's.**
   The due day of a recurring task was counted in the time zone of the server. On a server running in
   UTC with a household in Berlin, a task done shortly after midnight counted as done the day before,
@@ -125,6 +291,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   wall-clock time. The CSV export then showed the UTC time for these doses. The current minute is
   now stored in the same form as every other dose. The app itself always sends the time and was not
   affected. (#1387)
+- **A dose recorded through the API as taken without a time now gets the current time.** `POST
+  /api/v1/health/medications/{id}/logs` with `status: "taken"` and no `taken_at` stored the dose
+  without any time, so the CSV export left the time column empty for it. It now stores the current
+  minute in household time, the same as marking a dose as taken or correcting it to taken already
+  do. Doses stored this way before keep their empty time. The app itself always sends the time and
+  was not affected. (#1399)
 - **Marking an inventory deadline as done no longer stores a broken date when the next one would
   fall after 9999-12-31.** The next due date then has a five-digit year, which the date format cannot
   hold: the deadline got a date like "99990-06-01", its reminder a date that is not a date, and the
@@ -153,7 +325,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   editor offered 15 minutes, 1 hour and 2 weeks, and those remain valid, and a value that is already
   stored - whatever it is - is accepted unchanged when it is sent back, so changing the name or the
   date of such a birthday never fails over a reminder nobody touched. In the editor, a custom amount
-  of 0 or above 999 is now refused instead of being saved. (#1384)
+  that is empty, not a whole number, 0 or above 999 is now refused instead of being saved: the editor
+  says so in the interface language and puts the cursor in the field. It checks only a reminder that
+  is being changed, so a stored amount nobody touched still never blocks saving, and an amount typed
+  and then left behind by picking a preset instead is not sent at all. (#1384)
 - **On a phone, the task filter panel can be closed again after picking filters.** The Filter
   button sat at the end of the chip row, which scrolls sideways on a phone, and every filter you
   picked put another chip in front of it and pushed it further out of view - with the panel open
@@ -173,7 +348,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with its first occurrence, and the reminders every assignee inherited move too. A reminder that
   was already delivered or dismissed and now lies in the future goes off again at its new time,
   just as it does after you move an appointment in its dialog; one that has moved into the past
-  keeps its state rather than arriving a second time. Outlook is a one-way push and was not
+  keeps its state rather than arriving a second time, and so does one whose appointment the
+  provider merely wrote down differently at the same time. Outlook is a one-way push and was not
   affected. Reminders that already missed a move before this update are not corrected
   retroactively. (#1377)
 - **On a phone, a meal can be dragged to another day again, by a grip next to its buttons.** The
@@ -191,13 +367,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and stood 6 pixels lower than the item and category fields next to it. On a computer it also had a
   fixed width of 80 pixels, too narrow for its own placeholder in half of the 24 languages - English
   showed "Quantit". On a phone, quantity and category each got half of the row, and the preselected
-  category "Miscellaneous" disappeared under the select's arrow. The fields now take the row's
+  category "Miscellaneous" was cut off. The fields now take the row's
   height, and the category gets more of the width than the quantity, whose entry is only a few
   characters: at the usual phone widths every language's placeholder and preselected category fit
   in full. The words stay as they are rather than becoming "Qty" and "Misc" - the space was the
   problem, not the words, and the same fix covers the longer words in other languages. A custom
   category name that is still too long, or a very narrow screen, now ends with "..." instead of
-  breaking off mid-word under the arrow. (#1372)
+  being cut off mid-word. (#1372)
+
+- **On browsers older than Chrome 97, fasting durations and a birthday's own reminder lead time
+  work again.** Both are written by one helper that used `findLastIndex`, which Chrome knows from
+  version 97; below that the helper stopped with an error wherever one of these values was shown -
+  in Fasting, and on a birthday whose reminder is set to a custom lead time, in its view and in the
+  editor. It now counts backwards by hand, so it works down to the documented minimum of Chrome 87
+  and reads exactly as before everywhere else.
 
 - **On browsers older than Chrome 108, the main area scrolls and dialogs stay on screen.**
   Yuvomi sized the page, the app frame and the height limit of its dialogs with `dvh`, a unit for
@@ -273,6 +456,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   page in Yuvomi sends this request today, so only API clients notice the change, and anybody with
   both rights notices no difference. (#1351)
 
+- **With read-only access to Tasks, a started task is announced as started.** Members who may only
+  read Tasks see a status sign instead of the check button, and a screen reader reads out what it
+  shows. For a task in progress it said "Open", while the sign itself showed the amber ring of a
+  started task. It now says "In Progress", in the task list, for a subtask in the list and for a
+  subtask in the reading view. Open and done tasks are announced as before.
+
 - **With read-only access to Birthdays, tapping a birthday opens it again, so its note can be read
   on a phone.** Since 2.68.0 a member who may only read the Calendar - the module birthdays belong
   to - no longer gets the edit form, and rightly so. But nothing took its place, and on a phone the
@@ -332,9 +521,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   change itself, so the change is there. Nothing else is taken as done. The decision is made on what
   stands in the database after the failed attempt has rolled back, never on the wording of the
   error - a syntax error, a table that is missing, a constraint that comes out of the migration's own
-  SQL and a mistake in a JavaScript hook all still stop the start, exactly as before. Being locked
-  out is not success either: a start that loses the write lock still fails with its SQLite error
-  instead of recording a migration it never ran. (#1331)
+  SQL and a mistake in a JavaScript hook all still stop the start, exactly as before. The start that
+  came first no longer dies either: it could be locked out of the write by the other one
+  (`SQLITE_BUSY`, `SQLITE_BUSY_SNAPSHOT`), and SQLite reports a snapshot conflict at once, without
+  waiting. Such a start now rolls back and reads again - if the other process has recorded the
+  migration in the meantime, it is done; if not, the runner tries the same migration again, at most
+  five times with a short pause, and only then fails with the original SQLite error. (#1331)
 
 - **The language Yuvomi starts in now follows your browser's whole language tag.** A browser reports
   something like `zh-TW` or `de-AT`, and Yuvomi read only the part in front of the hyphen. For the
@@ -432,6 +624,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   where the receipt is stored: somebody allowed to edit Housekeeping but only to read Documents saw
   the upload, and saving ended in an error before the visit itself was saved. The upload is gone
   for them, a receipt that is already linked stays listed, and saving the visit keeps it. (#1265)
+
+- **The shopping list no longer offers buttons that a read-only member is not allowed to press.**
+  Where your access to Shopping is "read", every row could still be ticked off (by its box, by
+  tapping the row and by swiping), deleted (by button and by swipe), edited and dragged into a new
+  order, and the page kept the quick-add field, the + button, "Create new list" and the whole list menu -
+  rename, duplicate, import from the meal plan, send, categories, stores and delete. Each of them
+  ended in an error message, and a ticked item sprang back. The rule is the one Tasks, Notes and
+  Housekeeping already follow: something that shows a state stays, something that only acts
+  disappears. The box stays as a sign that says whether the item is ticked off or still open, and
+  it keeps following what others in the household tick off. What only the edit form used to show
+  is readable too: an item with a price, a store, a link or a note gets a button that opens a
+  read-only view with everything the form shows, and the link can be opened from there. An empty
+  list or a household without lists now only says so, instead of inviting you to add something.
+  Two ways between the kitchen tabs also ask the right of the tab they write into: "Into pantry"
+  on the shopping list needs write access to the Pantry, and the cart on a pantry row and "Add all
+  to shopping list" need write access to Shopping. Before, both ended in an error message for a
+  member who could only read the other tab. (#1265)
 
 - **A nightly recurring appointment that crosses midnight no longer covers the entry it should be
   sharing its column with.** On a day that carries two occurrences of the same series - last

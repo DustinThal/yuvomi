@@ -129,6 +129,7 @@
         "todayMeals": "今日饮食",
         "todayTitle": "今日重点",
         "todayTask": "任务",
+        "todayTaskStarted": "任务 · 已开始",
         "todayEvent": "日程",
         "todayShopping": "购物",
         "todayShoppingCount": "{{count}} 项未完成",
@@ -509,7 +510,10 @@
         "historyTickedBy": "由 {{name}} 勾选",
         "reminderLockedNeedsDueDate": "此任务有一个你无法更改的提醒。因此它需要一个截止日期。",
         "kanbanColCollapse": "收起该列",
-        "kanbanColExpand": "展开该列"
+        "kanbanColExpand": "展开该列",
+        "kanbanArchiveDone": "归档全部已完成",
+        "kanbanArchiveDoneConfirm": "要归档此列中所有已完成的任务吗？",
+        "kanbanArchiveDoneAction": "归档"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} 餐",
@@ -630,7 +634,9 @@
         "duplicateKeepQuantities": "保留数量",
         "duplicateKeepNotes": "保留备注和链接",
         "duplicateSubmit": "复制",
-        "duplicateError": "无法复制该清单。"
+        "duplicateError": "无法复制该清单。",
+        "itemStateChecked": "已勾选",
+        "itemStateOpen": "未勾选"
     },
     "meals": {
         "randomizeSuccess_few": "已规划 {{count}} 餐。",
@@ -2769,7 +2775,21 @@
         "healthPreventionKind": {
             "vaccination": "疫苗接种",
             "checkup": "体检"
-        }
+        },
+        "backupRestoreKeyLabel": "备份的密钥",
+        "backupRestoreKeyHint": "此备份来自另一个安装实例。请输入该实例的 DB_ENCRYPTION_KEY：它只用于本次恢复，不会被保存；恢复后的数据使用本实例的密钥加密。",
+        "backupRestoreKeyHttpWarning": "此页面未通过 HTTPS 打开：密钥将以未加密形式经网络传输。",
+        "otherSessionsTitle": "其他设备",
+        "otherSessionsHint": "在所有其他设备和浏览器上退出你的账户。此设备保持登录。API 令牌和已配对的墙面显示屏不受影响。",
+        "otherSessionsButton": "在其他设备上退出",
+        "otherSessionsConfirm": "要在所有其他设备上退出吗?",
+        "otherSessionsConfirmDetail": "在那里用你的账户登录的任何人都需要重新登录。此设备保持登录。",
+        "otherSessionsEnded": "已结束 {{count}} 个其他会话。",
+        "otherSessionsEnded_one": "已结束 {{count}} 个其他会话。",
+        "otherSessionsEnded_few": "已结束 {{count}} 个其他会话。",
+        "otherSessionsNone": "你的账户没有在其他任何设备上登录。",
+        "otherSessionsError": "在其他设备上退出失败。",
+        "otherSessionsTooManyAttempts": "请求过多，请稍候再试。"
     },
     "login": {
         "tagline": "欢迎回到您的家庭计划工具。",
@@ -2979,6 +2999,7 @@
         "nameDayClear": "移除命名日",
         "nameDayHint": "使用与生日相同的提醒设置。",
         "nameDayIncomplete": "请选择命名日的月份和日期。",
+        "reminderAmountInvalid": "请为自定义提醒输入 1 到 {{max}} 之间的整数。",
         "reminderOnDay": "当天提醒",
         "reminderBefore": "提前{{duration}}",
         "reminderAfterNoon": "中午12点后{{duration}}",
@@ -3176,6 +3197,7 @@
         "folderDeleteContentsChangedToast": "删除期间文件夹内容发生变化，因此已保留文件夹。成功删除的文档：{{deleted}}。",
         "folderDeleteContentsChangedWithFailuresToast": "文件夹内容发生了变化，且部分文档无法删除。文件夹已保留。",
         "folderDeleteInProgressToast": "此文件夹正在删除中。请在操作完成后重试。",
+        "folderDeleteNotManageableToast": "未删除任何内容。此文件夹现在包含你无权删除的文档。",
         "housekeepingFolder": "家务",
         "calendarItemsFolder": "日历项目",
         "folderBrowserTitle": "文件夹",
@@ -3546,7 +3568,8 @@
         "currentMonth": "当前",
         "noVisitReportsInMonth": "{{month}}没有上门服务记录。",
         "settledAdminOnly": "只有管理员可以修改或删除",
-        "reportVisitsCount": "上门次数"
+        "reportVisitsCount": "上门次数",
+        "receiptPresent": "已附上"
     },
     "userMultiSelect": {
         "moreUsers": "更多",
@@ -5450,7 +5473,8 @@
         "confirmSelection": "添加所选",
         "openAction": "打开 {{name}}",
         "limitReached": "最多 {{count}} 份文档。",
-        "limitReached_one": "最多 {{count}} 份文档。"
+        "limitReached_one": "最多 {{count}} 份文档。",
+        "presentHidden": "已附上"
     },
     "join": {
         "title": "设置你的账户",

@@ -129,6 +129,7 @@
         "todayMeals": "وجبات اليوم",
         "todayTitle": "المهم اليوم",
         "todayTask": "مهمة",
+        "todayTaskStarted": "مهمة · بدأت",
         "todayEvent": "موعد",
         "todayShopping": "تسوق",
         "todayShoppingCount": "{{count}} مفتوحة",
@@ -509,7 +510,10 @@
         "historyTickedBy": "وضع العلامة {{name}}",
         "reminderLockedNeedsDueDate": "هذه المهمة لديها تذكير لا يمكنك تغييره. لذلك تحتاج إلى تاريخ استحقاق.",
         "kanbanColCollapse": "طيّ العمود",
-        "kanbanColExpand": "توسيع العمود"
+        "kanbanColExpand": "توسيع العمود",
+        "kanbanArchiveDone": "أرشفة كل المهام المنجزة",
+        "kanbanArchiveDoneConfirm": "أرشفة جميع المهام المنجزة في هذا العمود؟",
+        "kanbanArchiveDoneAction": "أرشفة"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} وجبات",
@@ -630,7 +634,9 @@
         "duplicateKeepQuantities": "الاحتفاظ بالكميات",
         "duplicateKeepNotes": "الاحتفاظ بالملاحظات والروابط",
         "duplicateSubmit": "تكرار",
-        "duplicateError": "تعذّر تكرار القائمة."
+        "duplicateError": "تعذّر تكرار القائمة.",
+        "itemStateChecked": "تم التأشير",
+        "itemStateOpen": "لم يُؤشَّر عليه"
     },
     "meals": {
         "randomizeSuccess_few": "تم تخطيط {{count}} وجبات.",
@@ -2769,7 +2775,21 @@
         "healthPreventionKind": {
             "vaccination": "لقاح",
             "checkup": "فحص"
-        }
+        },
+        "backupRestoreKeyLabel": "مفتاح النسخة الاحتياطية",
+        "backupRestoreKeyHint": "هذه النسخة الاحتياطية من تثبيت آخر. أدخل DB_ENCRYPTION_KEY الخاص بذلك التثبيت: يُستخدم لهذه الاستعادة فقط ولا يُحفظ، وبعدها تُشفَّر البيانات بمفتاح هذا التثبيت.",
+        "backupRestoreKeyHttpWarning": "هذه الصفحة غير مفتوحة عبر HTTPS: سيُنقل المفتاح عبر الشبكة دون تشفير.",
+        "otherSessionsTitle": "الأجهزة الأخرى",
+        "otherSessionsHint": "يسجّل خروج حسابك من جميع الأجهزة والمتصفحات الأخرى. يبقى هذا الجهاز مسجّل الدخول. لا يتأثر رموز API وشاشات الحائط المقترنة.",
+        "otherSessionsButton": "تسجيل الخروج من الأجهزة الأخرى",
+        "otherSessionsConfirm": "تسجيل الخروج من جميع الأجهزة الأخرى؟",
+        "otherSessionsConfirmDetail": "على كل من سجّل الدخول بحسابك هناك أن يسجّل الدخول من جديد. يبقى هذا الجهاز مسجّل الدخول.",
+        "otherSessionsEnded": "تم إنهاء {{count}} جلسات أخرى.",
+        "otherSessionsEnded_one": "تم إنهاء جلسة أخرى واحدة.",
+        "otherSessionsEnded_few": "تم إنهاء {{count}} جلسات أخرى.",
+        "otherSessionsNone": "لم يكن حسابك مسجّل الدخول على أي جهاز آخر.",
+        "otherSessionsError": "فشل تسجيل الخروج من الأجهزة الأخرى.",
+        "otherSessionsTooManyAttempts": "طلبات كثيرة. انتظر قليلًا ثم حاول مرة أخرى."
     },
     "login": {
         "tagline": "مرحبًا بعودتك إلى منظّم عائلتك.",
@@ -2979,6 +2999,7 @@
         "nameDayClear": "إزالة يوم الاسم",
         "nameDayHint": "يستخدم التذكير نفسه المستخدم لعيد الميلاد.",
         "nameDayIncomplete": "اختر شهر ويوم الاسم.",
+        "reminderAmountInvalid": "أدخل عددًا صحيحًا من 1 إلى {{max}} للتذكير المخصص.",
         "reminderOnDay": "في نفس اليوم",
         "reminderBefore": "مسبقًا: {{duration}}",
         "reminderAfterNoon": "بعد 12:00 (+{{duration}})",
@@ -3176,6 +3197,7 @@
         "folderDeleteContentsChangedToast": "تغيّرت محتويات المجلد أثناء الحذف، لذلك تم الاحتفاظ به. المستندات المحذوفة بنجاح: {{deleted}}.",
         "folderDeleteContentsChangedWithFailuresToast": "تغيّرت محتويات المجلد وتعذر حذف بعض المستندات. تم الاحتفاظ بالمجلد.",
         "folderDeleteInProgressToast": "يتم حذف هذا المجلد حاليًا. حاول مرة أخرى بعد انتهاء العملية.",
+        "folderDeleteNotManageableToast": "لم يُحذف أي شيء. يحتوي هذا المجلد الآن على مستندات غير مسموح لك بحذفها.",
         "housekeepingFolder": "التدبير المنزلي",
         "calendarItemsFolder": "عناصر التقويم",
         "folderBrowserTitle": "المجلدات",
@@ -3546,7 +3568,8 @@
         "currentMonth": "الشهر الحالي",
         "noVisitReportsInMonth": "لم تُسجل أي زيارة في {{month}}.",
         "settledAdminOnly": "لا يمكن تعديله أو حذفه إلا بواسطة مسؤول",
-        "reportVisitsCount": "الزيارات"
+        "reportVisitsCount": "الزيارات",
+        "receiptPresent": "مرفق"
     },
     "userMultiSelect": {
         "moreUsers": "آخرون",
@@ -5450,7 +5473,8 @@
         "confirmSelection": "إضافة المحدد",
         "openAction": "فتح {{name}}",
         "limitReached": "بحد أقصى {{count}} مستندات.",
-        "limitReached_one": "مستند واحد بحد أقصى."
+        "limitReached_one": "مستند واحد بحد أقصى.",
+        "presentHidden": "مرفق"
     },
     "join": {
         "title": "إعداد حسابك",

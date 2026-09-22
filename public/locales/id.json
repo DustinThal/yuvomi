@@ -141,6 +141,7 @@
         "todayMeals": "Makan hari ini",
         "todayTitle": "Penting hari ini",
         "todayTask": "Tugas",
+        "todayTaskStarted": "Tugas · dimulai",
         "todayEvent": "Acara",
         "todayShopping": "Belanja",
         "todayShoppingCount": "{{count}} tersisa",
@@ -521,7 +522,10 @@
         "historyTickedBy": "dicentang oleh {{name}}",
         "reminderLockedNeedsDueDate": "Tugas ini memiliki pengingat yang tidak boleh Anda ubah. Karena itu tugas ini memerlukan tanggal jatuh tempo.",
         "kanbanColCollapse": "Ciutkan kolom",
-        "kanbanColExpand": "Bentangkan kolom"
+        "kanbanColExpand": "Bentangkan kolom",
+        "kanbanArchiveDone": "Arsipkan semua yang selesai",
+        "kanbanArchiveDoneConfirm": "Arsipkan semua tugas selesai di kolom ini?",
+        "kanbanArchiveDoneAction": "Arsipkan"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} hidangan",
@@ -642,7 +646,9 @@
         "duplicateKeepQuantities": "Pertahankan jumlah",
         "duplicateKeepNotes": "Pertahankan catatan & tautan",
         "duplicateSubmit": "Duplikat",
-        "duplicateError": "Daftar tidak dapat diduplikat."
+        "duplicateError": "Daftar tidak dapat diduplikat.",
+        "itemStateChecked": "dicentang",
+        "itemStateOpen": "belum dicentang"
     },
     "meals": {
         "randomizeSuccess_few": "{{count}} makanan direncanakan.",
@@ -2781,7 +2787,21 @@
         "healthPreventionKind": {
             "vaccination": "Vaksinasi",
             "checkup": "Pemeriksaan"
-        }
+        },
+        "backupRestoreKeyLabel": "Kunci cadangan",
+        "backupRestoreKeyHint": "Cadangan ini berasal dari instalasi lain. Masukkan DB_ENCRYPTION_KEY instalasi tersebut: kunci hanya dipakai untuk pemulihan ini dan tidak disimpan, lalu data dienkripsi dengan kunci instalasi ini.",
+        "backupRestoreKeyHttpWarning": "Halaman ini tidak dibuka melalui HTTPS: kunci akan dikirim lewat jaringan tanpa enkripsi.",
+        "otherSessionsTitle": "Perangkat lain",
+        "otherSessionsHint": "Mengeluarkan akunmu dari semua perangkat dan browser lain. Perangkat ini tetap masuk. Token API dan layar dinding yang dipasangkan tidak terpengaruh.",
+        "otherSessionsButton": "Keluar dari perangkat lain",
+        "otherSessionsConfirm": "Keluar dari semua perangkat lain?",
+        "otherSessionsConfirmDetail": "Siapa pun yang masuk dengan akunmu di sana harus masuk lagi. Perangkat ini tetap masuk.",
+        "otherSessionsEnded": "{{count}} sesi lain diakhiri.",
+        "otherSessionsEnded_one": "{{count}} sesi lain diakhiri.",
+        "otherSessionsEnded_few": "{{count}} sesi lain diakhiri.",
+        "otherSessionsNone": "Akunmu tidak masuk di perangkat lain mana pun.",
+        "otherSessionsError": "Gagal keluar dari perangkat lain.",
+        "otherSessionsTooManyAttempts": "Terlalu banyak permintaan. Tunggu sebentar, lalu coba lagi."
     },
     "login": {
         "tagline": "Selamat datang kembali di perencana keluarga Anda.",
@@ -2964,6 +2984,7 @@
         "nameDayClear": "Hapus hari nama",
         "nameDayHint": "Menggunakan pengingat yang sama dengan ulang tahun.",
         "nameDayIncomplete": "Pilih bulan dan tanggal hari nama.",
+        "reminderAmountInvalid": "Masukkan bilangan bulat dari 1 sampai {{max}} untuk pengingat kustom.",
         "reminderOnDay": "Pada hari-H",
         "reminderBefore": "{{duration}} sebelumnya",
         "reminderAfterNoon": "{{duration}} setelah pukul 12.00",
@@ -3233,6 +3254,7 @@
         "folderDeleteContentsChangedToast": "Isi folder berubah selama penghapusan, sehingga folder dipertahankan. Dokumen yang berhasil dihapus: {{deleted}}.",
         "folderDeleteContentsChangedWithFailuresToast": "Isi folder berubah dan beberapa dokumen tidak dapat dihapus. Folder dipertahankan.",
         "folderDeleteInProgressToast": "Folder ini sedang dihapus. Coba lagi setelah operasi selesai.",
+        "folderDeleteNotManageableToast": "Tidak ada yang dihapus. Folder ini sekarang berisi dokumen yang tidak boleh Anda hapus.",
         "housekeepingFolder": "Asisten Rumah Tangga",
         "calendarItemsFolder": "Entri kalender",
         "folderBrowserTitle": "Folder",
@@ -3550,7 +3572,8 @@
         "currentMonth": "Saat ini",
         "noVisitReportsInMonth": "Tidak ada kunjungan tercatat pada {{month}}.",
         "settledAdminOnly": "Hanya admin yang dapat mengubah atau menghapusnya",
-        "reportVisitsCount": "Kunjungan"
+        "reportVisitsCount": "Kunjungan",
+        "receiptPresent": "Terlampir"
     },
     "splitExpenses": {
         "title": "Pengeluaran Bersama",
@@ -5450,7 +5473,8 @@
         "confirmSelection": "Tambahkan pilihan",
         "openAction": "Buka {{name}}",
         "limitReached": "Maksimal {{count}} dokumen.",
-        "limitReached_one": "Maksimal {{count}} dokumen."
+        "limitReached_one": "Maksimal {{count}} dokumen.",
+        "presentHidden": "Terlampir"
     },
     "join": {
         "title": "Siapkan akun Anda",

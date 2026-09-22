@@ -129,6 +129,7 @@
         "todayMeals": "Mai ételek",
         "todayTitle": "Mai nap áttekintése",
         "todayTask": "Feladat",
+        "todayTaskStarted": "Feladat · elkezdve",
         "todayEvent": "Esemény",
         "todayShopping": "Bevásárlás",
         "todayShoppingCount": "{{count}} nyitott",
@@ -509,7 +510,10 @@
         "historyTickedBy": "kipipálta: {{name}}",
         "reminderLockedNeedsDueDate": "Ehhez a feladathoz emlékeztető tartozik, amelyet nem módosíthatsz. Ezért határidőre van szüksége.",
         "kanbanColCollapse": "Oszlop összecsukása",
-        "kanbanColExpand": "Oszlop kibővítése"
+        "kanbanColExpand": "Oszlop kibővítése",
+        "kanbanArchiveDone": "Minden kész archiválása",
+        "kanbanArchiveDoneConfirm": "Archiválod az oszlop összes kész feladatát?",
+        "kanbanArchiveDoneAction": "Archiválás"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} étkezésből",
@@ -630,7 +634,9 @@
         "duplicateKeepQuantities": "Mennyiségek megtartása",
         "duplicateKeepNotes": "Jegyzetek és linkek megtartása",
         "duplicateSubmit": "Duplikálás",
-        "duplicateError": "A listát nem sikerult duplikálni."
+        "duplicateError": "A listát nem sikerult duplikálni.",
+        "itemStateChecked": "kipipálva",
+        "itemStateOpen": "nincs kipipálva"
     },
     "meals": {
         "randomizeSuccess_few": "{{count}} étel megtervezve.",
@@ -2769,7 +2775,21 @@
         "healthPreventionKind": {
             "vaccination": "Védőoltás",
             "checkup": "Szűrés"
-        }
+        },
+        "backupRestoreKeyLabel": "A biztonsági mentés kulcsa",
+        "backupRestoreKeyHint": "Ez a biztonsági mentés egy másik telepítésből származik. Add meg annak DB_ENCRYPTION_KEY értékét: csak ehhez a visszaállításhoz használjuk, nem tároljuk, utána az adatokat ennek a telepítésnek a kulcsa titkosítja.",
+        "backupRestoreKeyHttpWarning": "Ez az oldal nem HTTPS-en keresztül van megnyitva: a kulcs titkosítatlanul halad át a hálózaton.",
+        "otherSessionsTitle": "Más eszközök",
+        "otherSessionsHint": "Kijelentkezteti a fiókodat az összes többi eszközön és böngészőben. Ez az eszköz bejelentkezve marad. Az API-tokeneket és a párosított fali kijelzőket ez nem érinti.",
+        "otherSessionsButton": "Kijelentkezés más eszközökön",
+        "otherSessionsConfirm": "Kijelentkezel az összes többi eszközön?",
+        "otherSessionsConfirmDetail": "Aki ott a fiókoddal van bejelentkezve, annak újra be kell jelentkeznie. Ez az eszköz bejelentkezve marad.",
+        "otherSessionsEnded": "{{count}} másik munkamenet befejezve.",
+        "otherSessionsEnded_one": "{{count}} másik munkamenet befejezve.",
+        "otherSessionsEnded_few": "{{count}} másik munkamenet befejezve.",
+        "otherSessionsNone": "A fiókod egyetlen más eszközön sem volt bejelentkezve.",
+        "otherSessionsError": "A kijelentkezés más eszközökön nem sikerült.",
+        "otherSessionsTooManyAttempts": "Túl sok kérés. Várj egy kicsit, majd próbáld újra."
     },
     "login": {
         "tagline": "Üdv újra a családi tervezőben.",
@@ -2952,6 +2972,7 @@
         "nameDayClear": "Névnap eltávolítása",
         "nameDayHint": "Ugyanazt az emlékeztetőt használja, mint a születésnap.",
         "nameDayIncomplete": "Válaszd ki a névnap hónapját és napját.",
+        "reminderAmountInvalid": "Az egyéni emlékeztetőhöz adj meg egy egész számot 1 és {{max}} között.",
         "reminderOnDay": "Aznap",
         "reminderBefore": "Előtte: {{duration}}",
         "reminderAfterNoon": "Dél után (+{{duration}})",
@@ -3233,6 +3254,7 @@
         "folderDeleteContentsChangedToast": "A mappa tartalma törlés közben megváltozott, ezért a mappa megmaradt. Sikeresen törölt dokumentumok: {{deleted}}.",
         "folderDeleteContentsChangedWithFailuresToast": "A mappa tartalma megváltozott, és néhány dokumentumot nem sikerült törölni. A mappa megmaradt.",
         "folderDeleteInProgressToast": "A mappa törlése folyamatban van. Próbálja újra a művelet befejezése után.",
+        "folderDeleteNotManageableToast": "Semmi sem lett törölve. A mappában már olyan dokumentumok is vannak, amelyeket nem törölhet.",
         "housekeepingFolder": "Háztartás",
         "calendarItemsFolder": "Naptár elemei",
         "folderBrowserTitle": "Mappák",
@@ -3546,7 +3568,8 @@
         "currentMonth": "Aktuális hónap",
         "noVisitReportsInMonth": "{{month}} időszakban nem volt személyzeti látogatás.",
         "settledAdminOnly": "Csak egy admin módosíthatja vagy törölheti",
-        "reportVisitsCount": "Látogatások"
+        "reportVisitsCount": "Látogatások",
+        "receiptPresent": "Csatolva"
     },
     "userMultiSelect": {
         "moreUsers": "továbbiak",
@@ -5450,7 +5473,8 @@
         "confirmSelection": "Kiválasztottak hozzáadása",
         "openAction": "{{name}} megnyitása",
         "limitReached": "Legfeljebb {{count}} dokumentum.",
-        "limitReached_one": "Legfeljebb {{count}} dokumentum."
+        "limitReached_one": "Legfeljebb {{count}} dokumentum.",
+        "presentHidden": "Csatolva"
     },
     "join": {
         "title": "Fiók beállítása",

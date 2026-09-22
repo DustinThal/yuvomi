@@ -192,6 +192,36 @@ test('Aufgabenzeile mit `tasks: read`: der Haken wird zum Zustandszeichen', () =
   });
 });
 
+// DAS ZEICHEN NENNT JEDEN DER DREI ZUSTAENDE BEIM NAMEN. Die Beschriftung
+// kannte nur „erledigt oder nicht" und rief eine begonnene Aufgabe „offen" -
+// sehend sah man den gelben Ring, der Screenreader sagte das Gegenteil. Der
+// Knopf mit Schreibrecht braucht die Unterscheidung nicht, weil er eine
+// Handlung nennt; das Zeichen nennt den Zustand und muss ihn deshalb treffen.
+test('Zustandszeichen bei `tasks: read`: eine begonnene Aufgabe heisst "In Bearbeitung", nicht "Offen"', () => {
+  const zustaende = [
+    ['open', 'tasks.statusOpen'],
+    ['in_progress', 'tasks.statusInProgress'],
+    ['done', 'tasks.statusDone'],
+  ];
+  withAccess({ tasks: 'read' }, () => {
+    for (const [status, key] of zustaende) {
+      const html = tasks.renderTaskCard(aufgabe({ status }));
+      const zeichen = html.match(/<span class="task-status-btn [^"]*task-status-btn--static"[^>]*aria-label="([^"]*)"/);
+      assert.ok(zeichen, `Zeichen fuer ${status} vorhanden`);
+      assert.equal(zeichen[1], `Müll rausbringen: ${key}`, `Aufgabe im Zustand ${status}`);
+
+      const mitTeil = tasks.renderTaskCard(aufgabe({ subtasks: [{ id: 8, title: 'Tonne', status }] }));
+      const teil = mitTeil.match(/subtask-item__checkbox--static[^"]*"[^>]*aria-label="([^"]*)"/);
+      assert.ok(teil, `Teilaufgaben-Zeichen fuer ${status} vorhanden`);
+      assert.equal(teil[1], `Tonne: ${key}`, `Teilaufgabe der Liste im Zustand ${status}`);
+
+      const ctx = { users: [], currentUserId: 1, isAdmin: false, categories: [], container: null, onChanged: () => {} };
+      const zeile = detail.subtaskListNode(aufgabe({ subtasks: [{ id: 8, title: 'Tonne', status }] }), ctx).childNodes[0];
+      assert.equal(zeile.getAttribute('aria-label'), `Tonne: ${key}`, `Teilaufgabe der Leseansicht im Zustand ${status}`);
+    }
+  });
+});
+
 test('Aufgabenzeile mit `tasks: read`: auch die aufgeklappte Unteraufgabenliste bietet kein Anlegen an', () => {
   withAccess({ tasks: 'read' }, () => {
     const html = tasks.renderTaskCard(aufgabe({
@@ -770,18 +800,25 @@ test('Kalender-Detailansicht: Löschen, Zurücksetzen und Bearbeiten fallen weg,
 // Die Begründung für das Ausblenden des Einlösens - am Server gemessen
 // -------------------------------------------------------------------------
 
-test('die Ausnahmen vom Modulrecht stehen am Server, und es sind genau zwei Sorten', () => {
+test('die Ausnahmen vom Modulrecht stehen am Server, und es sind genau zwei Sorten', async () => {
   // WOVON DIESE SEITE ABHÄNGT. Bekäme `/rewards/redemptions` eine
   // Niveau-Senkung wie `/schedule/preferences`, gehörte der Einlöse-Knopf
   // einem Menschen mit `rewards: read` zurück. Und verlöre ein Display seine
   // benannten Schreibrouten, gehörten Personenauswahl und Tablett-Einlösen
   // weg. Beides sind Entscheidungen, die anderswo fallen - dieser Test macht
   // die Kopplung sichtbar, statt sie zu erraten.
-  const scopes = readFileSync(new URL('../server/scopes.js', import.meta.url), 'utf8');
-  const fn = scopes.slice(scopes.indexOf('function sessionModuleAccessRequirement(path, method) {'));
-  const body = fn.slice(0, fn.indexOf('\n}\n'));
-  assert.match(body, /path === '\/schedule\/preferences'/);
-  assert.ok(!body.includes('rewards'),
+  //
+  // Die Senkungen stehen seit #1290 in EINER Tabelle (`READ_LEVEL_WRITES` in
+  // server/scopes.js), die beide Gates lesen - gemessen wird deshalb das
+  // Urteil, nicht die Schreibweise der Funktion.
+  const { READ_LEVEL_WRITES, sessionModuleAccessRequirement } = await import('../server/scopes.js');
+  assert.equal(sessionModuleAccessRequirement('/schedule/preferences', 'PUT').access, 'read',
+    'Gegenprobe: die Tabelle wird wirklich gelesen');
+  for (const pfad of ['/rewards/redemptions', '/rewards/redemptions/1/approve', '/rewards/1/redeem', '/rewards']) {
+    assert.equal(sessionModuleAccessRequirement(pfad, 'POST').access, 'write',
+      `eine Senkung für ${pfad} hieße: der Einlöse-Knopf gehört in rewards.js zurück`);
+  }
+  assert.ok(!READ_LEVEL_WRITES.some((e) => /rewards/i.test(e.pattern)),
     'eine Senkung für /rewards hieße: der Einlöse-Knopf gehört in rewards.js zurück');
 
   // Die zweite Sorte: benannte Routen für ein gekoppeltes Gerät.
@@ -2010,7 +2047,7 @@ function editorAuswahl(html, id) {
  * Zurueck kommt, was an den Server ging - durch JSON, wie in api.js: ein Feld
  * mit `undefined` kaeme dort gar nicht an.
  */
-async function geburtstagSpeichern(eintrag, { mode = 'edit', bedienen = async () => {} } = {}) {
+async function geburtstagSpeichern(eintrag, { mode = 'edit', bedienen = async () => {}, roh = false } = {}) {
   const optionen = withAccess({ calendar: 'write' }, () => modalOptionen(
     () => birthdays.openBirthdayModal({ mode, birthday: mode === 'edit' ? eintrag : null }),
   ));
@@ -2052,7 +2089,8 @@ async function geburtstagSpeichern(eintrag, { mode = 'edit', bedienen = async ()
   };
   globalThis.__apiStub = { get: async () => ({ data: vorher.liste }), post: mitschreiben('post'), put: mitschreiben('put') };
   globalThis.window.yuvomi = globalThis.window.yuvomi ?? {};
-  globalThis.window.yuvomi.showToast = () => {};
+  const toasts = [];
+  globalThis.window.yuvomi.showToast = (text, art) => { toasts.push({ text, art }); };
   try {
     await el['#bd-save'].feuern('click');
   } finally {
@@ -2060,11 +2098,54 @@ async function geburtstagSpeichern(eintrag, { mode = 'edit', bedienen = async ()
     globalThis.window.yuvomi.showToast = vorher.toast;
     birthdays.state.birthdays = vorher.liste;
   }
+  if (roh) return { gesendet, toasts, el };
   assert.equal(gesendet.length, 1, 'genau ein Schreibaufruf - sonst misst der Test den Speichern-Weg nicht');
   return gesendet[0];
 }
 
 const ERINNERUNGSFELDER = ['reminder_offset', 'reminder_custom_amount', 'reminder_custom_unit'];
+
+test('eigene Angabe mit ungueltiger Anzahl: der Editor speichert nicht und sagt es ueber t() (Nachzug zu #1384)', async () => {
+  for (const anzahl of ['0', '1000', '1.5', '']) {
+    const { gesendet, toasts } = await geburtstagSpeichern(geburtstag(), {
+      roh: true,
+      bedienen: async (el) => {
+        el['#bd-reminder-offset'].value = 'custom';
+        el['#bd-reminder-custom-amount'].value = anzahl;
+      },
+    });
+    assert.equal(gesendet.length, 0, `Anzahl ${JSON.stringify(anzahl)}: nichts geht an den Server`);
+    assert.deepEqual(toasts.map((toast) => toast.text), ['birthdays.reminderAmountInvalid{"max":999}'],
+      `Anzahl ${JSON.stringify(anzahl)}: der Hinweis kommt aus t(), nicht als Servermeldung`);
+  }
+});
+
+test('eine gespeicherte Anzahl ausserhalb 1-999 blockiert nicht, wenn niemand die Erinnerung anfasst', async () => {
+  // #1384 sagt zu: ein gespeicherter Wert, wie er auch sei, laesst eine
+  // Namensaenderung nie scheitern. Die Pruefung gilt nur dem, was mitgeht.
+  const eintrag = geburtstag({ reminder_offset: 'custom', reminder_custom_amount: 1500, reminder_custom_unit: 'days' });
+  const { gesendet, toasts } = await geburtstagSpeichern(eintrag, {
+    roh: true,
+    bedienen: async (el) => { el['#bd-name'].value = 'Oma Erna M.'; },
+  });
+  assert.deepEqual(toasts.map((toast) => toast.text).filter((text) => text.includes('reminderAmountInvalid')), [],
+    'kein Hinweis zu einer Erinnerung, die nicht mitgeht');
+  assert.equal(gesendet.length, 1, 'gespeichert wird trotzdem');
+  assert.equal(gesendet[0].body.name, 'Oma Erna M.');
+  assert.ok(ERINNERUNGSFELDER.every((feld) => !(feld in gesendet[0].body)), 'die unberuehrte Erinnerung geht nicht mit');
+});
+
+test('Vorgabe nach getippter ungueltiger Anzahl: gespeichert wird ohne Anzahl und Einheit', async () => {
+  const gesendet = await geburtstagSpeichern(geburtstag(), {
+    bedienen: async (el) => {
+      el['#bd-reminder-custom-amount'].value = '0';
+      el['#bd-reminder-offset'].value = '2880';
+    },
+  });
+  assert.equal(gesendet.body.reminder_offset, '2880');
+  assert.ok(!('reminder_custom_amount' in gesendet.body) && !('reminder_custom_unit' in gesendet.body),
+    'das verborgene Feld laesst das Speichern nicht scheitern');
+});
 
 test('Geburtstag ohne gespeicherte Erinnerung: der Editor zeigt den Tag selbst, wie der Server erinnert', () => {
   const editor = (birthday, mode = 'edit') => withAccess({ calendar: 'write' }, () => modalOptionen(
@@ -3433,6 +3514,57 @@ test('Beleg-Feld: die Ablage haengt am Schreibrecht auf die DOKUMENTE, nicht auf
   });
 });
 
+test('Beleg, den der Server nicht nennt: ein ruhiges Zeichen statt einer leeren Ablage (#1358)', () => {
+  // So kommt ein Besuch an, dessen Beleg ein privates Dokument einer anderen
+  // Person ist: `has_receipt` bleibt, Name und ID sind maskiert.
+  const verdeckt = hkBesuch({ has_receipt: true, receipt_document_id: null, receipt_document_name: null });
+  const zeichen = /<dt>housekeeping\.receiptLabel<\/dt><dd>housekeeping\.receiptPresent<\/dd>/;
+  for (const documents of ['write', 'read']) {
+    withAccess({ housekeeping: 'write', documents }, () => {
+      const feld = hk.receiptFieldHtml(verdeckt);
+      assert.doesNotMatch(feld, /type="file"|document-dropzone/, `documents: ${documents} - keine Ablage, die den Beleg ersetzen wuerde`);
+      assert.match(feld, zeichen, `documents: ${documents} - der Dialog sagt, dass es einen Beleg gibt`);
+      assert.doesNotMatch(feld, /undefined|null/);
+    });
+    const [bericht] = mitModal(() => withAccess({ housekeeping: 'read', documents }, () => hk.openVisitReportModal(verdeckt)));
+    assert.match(bericht.content, zeichen, `documents: ${documents} - der Bericht zeigt dasselbe wie der Dialog`);
+  }
+  withAccess({ housekeeping: 'write', documents: 'none' }, () => {
+    assert.equal(hk.receiptFieldHtml(verdeckt), '', 'bei `documents: none` bleibt die Stelle leer wie bisher');
+  });
+
+  // Verdeckt heisst: die ID ist maskiert - nicht "der Name fehlt". Ein Besuch
+  // mit sichtbarer ID, aber ohne Namen (leerer Dokumentname, ein Serialisierer
+  // ohne Namensfeld) gehoert dem Betrachter und behaelt seine Ablage.
+  for (const ohneName of [
+    hkBesuch({ has_receipt: true, receipt_document_id: 44, receipt_document_name: '' }),
+    hkBesuch({ has_receipt: true, receipt_document_id: 44 }),
+  ]) {
+    withAccess({ housekeeping: 'write', documents: 'write' }, () => {
+      const feld = hk.receiptFieldHtml(ohneName);
+      assert.match(feld, /id="housekeeping-receipt-file" type="file"/, 'mit sichtbarer ID bleibt die Ablage');
+      assert.doesNotMatch(feld, zeichen);
+    });
+  }
+});
+
+test('Beleg, den der Server nicht nennt: Speichern schickt null und laedt nichts hoch (#1358)', async () => {
+  hkState({ workers: [{ id: 7, display_name: 'Ana' }] });
+  const verdeckt = hkBesuch({ has_receipt: true, receipt_document_id: null, receipt_document_name: null });
+  let gesendet = null;
+  const anfragen = await mitFileReader(() => mitHkApi(async () => {
+    const put = globalThis.__apiStub.put;
+    globalThis.__apiStub.put = async (url, body) => { gesendet = body; return put(url, body); };
+    await withAccess({ housekeeping: 'write', documents: 'write' }, () => {
+      const [dialog] = mitModal(() => hk.openVisitEditModal(verdeckt, hkContainer()));
+      return besuchAbsenden(dialog)();
+    });
+  }, { 'POST /documents': { data: { id: 99 } } }));
+  assert.ok(!anfragen.includes('POST /documents'), 'keine Ablage, also kein Hochladen');
+  assert.ok(anfragen.includes('PUT /housekeeping/visits/12'));
+  assert.equal(gesendet.receipt_document_id, null, 'null heisst beim Server "behalten"');
+});
+
 test('Beleg beim Absenden: ohne Schreibrecht auf die Dokumente kein POST /documents, der Einsatz speichert trotzdem', async () => {
   hkState({ workers: [{ id: 7, display_name: 'Ana' }] });
   const besuch = hkBesuch({ receipt_document_id: 44, receipt_document_name: 'Beleg' });
@@ -3590,6 +3722,25 @@ test('Haushaltshilfe hat keine Display-Ausnahme, und ein Display erreicht die Se
   const scopes = display.slice(display.indexOf('DISPLAY_SCOPES = Object.freeze(['));
   assert.ok(!/housekeeping:/.test(scopes.slice(0, scopes.indexOf(']);'))),
     'ohne Scope setzt server/permissions.js das Modul fuer ein Display auf none - die Seite ist fuer es nicht offen');
+});
+
+test('Aufgaben-Dokumente ohne Dokumentenrecht: keine Zahl, keine Zeile, kein Link auf /documents/null (#1358)', () => {
+  // So kommt eine Aufgabe ohne Leserecht auf die Dokumente an: der Server sagt
+  // weder wie viele noch welche (`document_count` und `documents` sind null).
+  const verdeckt = aufgabe({ document_count: null, documents: null });
+  const mitDokumenten = aufgabe({ document_count: 2, documents: [{ id: 5, name: 'Anleitung.pdf', mime_type: 'application/pdf' }] });
+  withAccess({ tasks: 'write', documents: 'read' }, () => {
+    assert.doesNotMatch(tasks.renderTaskCard(verdeckt), /task-card__docs|null/, 'keine Klammer ohne Zahl');
+    assert.match(tasks.renderTaskCard(mitDokumenten), /task-card__docs/, 'Gegenfall: mit Zahl die Klammer');
+    assert.equal(detail.documentListNode(null), null, 'keine Zeile ohne Liste');
+    assert.equal(detail.documentListNode([{ id: null, name: null }]), null, 'ein Eintrag ohne ID wird kein Link');
+    const node = detail.documentListNode(mitDokumenten.documents);
+    assert.equal(node.childNodes[0].href, '/api/v1/documents/5/preview', 'Gegenfall: mit ID der Link');
+  });
+  withAccess({ tasks: 'write', documents: 'none' }, () => {
+    assert.equal(detail.documentListNode(mitDokumenten.documents), null,
+      'bei `documents: none` keine Zeile - jeder Link ginge ins 403');
+  });
 });
 
 test.after(() => miniDomAbraeumen());

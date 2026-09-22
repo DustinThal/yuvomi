@@ -129,6 +129,7 @@
         "todayMeals": "Питание сегодня",
         "todayTitle": "Важное сегодня",
         "todayTask": "Задача",
+        "todayTaskStarted": "Задача · начата",
         "todayEvent": "Событие",
         "todayShopping": "Покупки",
         "todayShoppingCount": "{{count}} открыто",
@@ -509,7 +510,10 @@
         "historyTickedBy": "отметил(а) {{name}}",
         "reminderLockedNeedsDueDate": "У этой задачи есть напоминание, которое вы не можете изменить. Поэтому ей нужен срок выполнения.",
         "kanbanColCollapse": "Свернуть столбец",
-        "kanbanColExpand": "Развернуть столбец"
+        "kanbanColExpand": "Развернуть столбец",
+        "kanbanArchiveDone": "Архивировать все выполненные",
+        "kanbanArchiveDoneConfirm": "Архивировать все выполненные задачи в этом столбце?",
+        "kanbanArchiveDoneAction": "Архивировать"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} приёма пищи",
@@ -630,7 +634,9 @@
         "duplicateKeepQuantities": "Сохранить количество",
         "duplicateKeepNotes": "Сохранить заметки и ссылки",
         "duplicateSubmit": "Дублировать",
-        "duplicateError": "Не удалось дублировать список."
+        "duplicateError": "Не удалось дублировать список.",
+        "itemStateChecked": "отмечено",
+        "itemStateOpen": "не отмечено"
     },
     "meals": {
         "randomizeSuccess_few": "Запланировано {{count}} приёма пищи.",
@@ -2769,7 +2775,21 @@
         "healthPreventionKind": {
             "vaccination": "Прививка",
             "checkup": "Осмотр"
-        }
+        },
+        "backupRestoreKeyLabel": "Ключ резервной копии",
+        "backupRestoreKeyHint": "Эта резервная копия создана другой установкой. Введите её DB_ENCRYPTION_KEY: он используется только для этого восстановления и не сохраняется, после чего данные шифруются ключом этой установки.",
+        "backupRestoreKeyHttpWarning": "Страница открыта не по HTTPS: ключ будет передан по сети без шифрования.",
+        "otherSessionsTitle": "Другие устройства",
+        "otherSessionsHint": "Выполняет выход из вашей учётной записи на всех других устройствах и в браузерах. Это устройство останется в системе. API-токены и подключённые настенные дисплеи не затрагиваются.",
+        "otherSessionsButton": "Выйти на других устройствах",
+        "otherSessionsConfirm": "Выйти на всех других устройствах?",
+        "otherSessionsConfirmDetail": "Всем, кто вошёл там под вашей учётной записью, придётся войти снова. Это устройство останется в системе.",
+        "otherSessionsEnded": "Завершено других сеансов: {{count}}.",
+        "otherSessionsEnded_one": "Завершён {{count}} другой сеанс.",
+        "otherSessionsEnded_few": "Завершено {{count}} других сеанса.",
+        "otherSessionsNone": "Ваша учётная запись не была открыта ни на одном другом устройстве.",
+        "otherSessionsError": "Не удалось выйти на других устройствах.",
+        "otherSessionsTooManyAttempts": "Слишком много запросов. Подождите немного и попробуйте снова."
     },
     "login": {
         "tagline": "С возвращением в ваш семейный планировщик.",
@@ -2979,6 +2999,7 @@
         "nameDayClear": "Удалить именины",
         "nameDayHint": "Используется то же напоминание, что и для дня рождения.",
         "nameDayIncomplete": "Выберите месяц и день именин.",
+        "reminderAmountInvalid": "Для своего напоминания введите целое число от 1 до {{max}}.",
         "reminderOnDay": "В тот же день",
         "reminderBefore": "Заранее: {{duration}}",
         "reminderAfterNoon": "После полудня (+{{duration}})",
@@ -3176,6 +3197,7 @@
         "folderDeleteContentsChangedToast": "Содержимое папки изменилось во время удаления, поэтому папка сохранена. Успешно удалено документов: {{deleted}}.",
         "folderDeleteContentsChangedWithFailuresToast": "Содержимое папки изменилось, а некоторые документы удалить не удалось. Папка сохранена.",
         "folderDeleteInProgressToast": "Эта папка сейчас удаляется. Повторите попытку после завершения операции.",
+        "folderDeleteNotManageableToast": "Ничего не удалено. В этой папке теперь есть документы, которые вам нельзя удалять.",
         "housekeepingFolder": "Уборка",
         "calendarItemsFolder": "Элементы календаря",
         "folderBrowserTitle": "Папки",
@@ -3546,7 +3568,8 @@
         "currentMonth": "Текущий",
         "noVisitReportsInMonth": "За период {{month}} визитов не записано.",
         "settledAdminOnly": "Изменить или удалить может только администратор",
-        "reportVisitsCount": "Визиты"
+        "reportVisitsCount": "Визиты",
+        "receiptPresent": "Прикреплён"
     },
     "userMultiSelect": {
         "moreUsers": "ещё",
@@ -5450,7 +5473,8 @@
         "confirmSelection": "Добавить выбранные",
         "openAction": "Открыть {{name}}",
         "limitReached": "Не более {{count}} документов.",
-        "limitReached_one": "Не более {{count}} документа."
+        "limitReached_one": "Не более {{count}} документа.",
+        "presentHidden": "Прикреплён"
     },
     "join": {
         "title": "Настройка учётной записи",

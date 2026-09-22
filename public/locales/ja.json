@@ -129,6 +129,7 @@
         "todayMeals": "今日の食事",
         "todayTitle": "今日の重要事項",
         "todayTask": "タスク",
+        "todayTaskStarted": "タスク · 開始済み",
         "todayEvent": "予定",
         "todayShopping": "買い物",
         "todayShoppingCount": "{{count}} 件未完了",
@@ -509,7 +510,10 @@
         "historyTickedBy": "チェックしたのは {{name}}",
         "reminderLockedNeedsDueDate": "このタスクには変更できないリマインダーが設定されています。そのため期限日が必要です。",
         "kanbanColCollapse": "列を閉じる",
-        "kanbanColExpand": "列を開く"
+        "kanbanColExpand": "列を開く",
+        "kanbanArchiveDone": "完了をすべてアーカイブ",
+        "kanbanArchiveDoneConfirm": "この列の完了したタスクをすべてアーカイブしますか？",
+        "kanbanArchiveDoneAction": "アーカイブ"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}}件の食事",
@@ -630,7 +634,9 @@
         "duplicateKeepQuantities": "数量を引き継ぐ",
         "duplicateKeepNotes": "メモとリンクを引き継ぐ",
         "duplicateSubmit": "複製",
-        "duplicateError": "リストを複製できませんでした。"
+        "duplicateError": "リストを複製できませんでした。",
+        "itemStateChecked": "チェック済み",
+        "itemStateOpen": "未チェック"
     },
     "meals": {
         "randomizeSuccess_few": "{{count}} 件の食事を計画しました。",
@@ -2769,7 +2775,21 @@
         "healthPreventionKind": {
             "vaccination": "予防接種",
             "checkup": "健診"
-        }
+        },
+        "backupRestoreKeyLabel": "バックアップのキー",
+        "backupRestoreKeyHint": "このバックアップは別のインストールのものです。そのインストールの DB_ENCRYPTION_KEY を入力してください。キーはこの復元にのみ使われ、保存されません。復元後のデータはこのインストールのキーで暗号化されます。",
+        "backupRestoreKeyHttpWarning": "このページは HTTPS で開かれていません。キーは暗号化されずにネットワークを通ります。",
+        "otherSessionsTitle": "他のデバイス",
+        "otherSessionsHint": "他のすべてのデバイスとブラウザーでアカウントからサインアウトします。このデバイスはサインインしたままです。API トークンとペアリング済みのウォールディスプレイには影響しません。",
+        "otherSessionsButton": "他のデバイスからサインアウト",
+        "otherSessionsConfirm": "他のすべてのデバイスからサインアウトしますか?",
+        "otherSessionsConfirmDetail": "そこであなたのアカウントでサインインしている人は、もう一度サインインする必要があります。このデバイスはサインインしたままです。",
+        "otherSessionsEnded": "他のセッションを {{count}} 件終了しました。",
+        "otherSessionsEnded_one": "他のセッションを {{count}} 件終了しました。",
+        "otherSessionsEnded_few": "他のセッションを {{count}} 件終了しました。",
+        "otherSessionsNone": "他のデバイスではサインインしていませんでした。",
+        "otherSessionsError": "他のデバイスからのサインアウトに失敗しました。",
+        "otherSessionsTooManyAttempts": "リクエストが多すぎます。少し待ってから、もう一度お試しください。"
     },
     "login": {
         "tagline": "家族のプランナーへおかえりなさい。",
@@ -2979,6 +2999,7 @@
         "nameDayClear": "聖名祝日を削除",
         "nameDayHint": "誕生日と同じリマインダーを使用します。",
         "nameDayIncomplete": "聖名祝日の月と日を選択してください。",
+        "reminderAmountInvalid": "カスタムリマインダーには 1 から {{max}} までの整数を入力してください。",
         "reminderOnDay": "当日",
         "reminderBefore": "{{duration}}前",
         "reminderAfterNoon": "正午の{{duration}}後",
@@ -3176,6 +3197,7 @@
         "folderDeleteContentsChangedToast": "削除中にフォルダーの内容が変更されたため、フォルダーは保持されました。削除できたドキュメント: {{deleted}}。",
         "folderDeleteContentsChangedWithFailuresToast": "フォルダーの内容が変更され、一部のドキュメントを削除できませんでした。フォルダーは保持されました。",
         "folderDeleteInProgressToast": "このフォルダーは現在削除中です。処理が完了してからもう一度お試しください。",
+        "folderDeleteNotManageableToast": "何も削除されていません。このフォルダーには、削除する権限のないドキュメントが含まれるようになりました。",
         "housekeepingFolder": "家事",
         "calendarItemsFolder": "カレンダー項目",
         "folderBrowserTitle": "フォルダー",
@@ -3546,7 +3568,8 @@
         "currentMonth": "今月",
         "noVisitReportsInMonth": "{{month}}の訪問記録はありません。",
         "settledAdminOnly": "変更・削除できるのは管理者だけです",
-        "reportVisitsCount": "訪問"
+        "reportVisitsCount": "訪問",
+        "receiptPresent": "添付あり"
     },
     "userMultiSelect": {
         "moreUsers": "他",
@@ -5450,7 +5473,8 @@
         "confirmSelection": "選択を追加",
         "openAction": "{{name}} を開く",
         "limitReached": "書類は最大 {{count}} 件までです。",
-        "limitReached_one": "書類は最大 {{count}} 件までです。"
+        "limitReached_one": "書類は最大 {{count}} 件までです。",
+        "presentHidden": "添付あり"
     },
     "join": {
         "title": "アカウントの設定",

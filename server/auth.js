@@ -11,6 +11,7 @@ import crypto from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import * as db from './db.js';
 import { generateToken, csrfMiddleware } from './middleware/csrf.js';
+import { SESSION_MAX_AGE_MS, sessionCookieRefreshDue } from './utils/session-lifetime.js';
 import { collectErrors, date as validateDate, str, MAX_SHORT, MAX_TITLE } from './middleware/validate.js';
 import { createLogger } from './logger.js';
 import { memberEmail } from './services/member-email.js';
@@ -192,7 +193,7 @@ class BetterSQLiteStore extends session.Store {
 
   set(sid, sess, callback) {
     try {
-      const ttl = sess.cookie?.maxAge ?? 7 * 24 * 60 * 60 * 1000;
+      const ttl = sess.cookie?.maxAge ?? SESSION_MAX_AGE_MS;
       const expiredAt = Date.now() + ttl;
       db.get()
         .prepare('INSERT OR REPLACE INTO sessions (sid, sess, expired_at) VALUES (?, ?, ?)')
@@ -212,9 +213,29 @@ class BetterSQLiteStore extends session.Store {
     }
   }
 
+  /**
+   * Die Auffrischung des Cookies (#1356) im Store nachtragen: neuer Ablauf in
+   * `sess.cookie` (daraus liest `refreshSessionCookieIfDue` die Frist) und in
+   * `expired_at`. NUR `UPDATE`: eine Zeile, die inzwischen widerrufen wurde,
+   * bleibt weg - anders als `set()`, das ein `INSERT OR REPLACE` ist.
+   */
+  extendCookie(sid, expiresAt) {
+    db.get()
+      .prepare(`UPDATE sessions
+                   SET sess = json_set(sess, '$.cookie.expires', ?, '$.cookie.originalMaxAge', ?),
+                       expired_at = ?
+                 WHERE sid = ?`)
+      .run(new Date(expiresAt).toISOString(), SESSION_MAX_AGE_MS, expiresAt, sid);
+  }
+
+  // Laeuft bei JEDEM Request mit Sitzung, auch bei statischen Dateien: der
+  // Eintrag gleitet also mindestens so weit wie das Cookie, das `requireAuth`
+  // nur alle zwoelf Stunden nachdatiert (#1356). Der Store endet damit nie vor
+  // dem Cookie, hoechstens eine Drosselfrist danach - ein gueltiges Cookie
+  // fuehrt nie ins Leere.
   touch(sid, sess, callback) {
     try {
-      const ttl = sess.cookie?.maxAge ?? 7 * 24 * 60 * 60 * 1000;
+      const ttl = sess.cookie?.maxAge ?? SESSION_MAX_AGE_MS;
       const expiredAt = Date.now() + ttl;
       db.get()
         .prepare('UPDATE sessions SET expired_at = ? WHERE sid = ?')
@@ -273,13 +294,14 @@ if (process.env.SESSION_SECRET.startsWith('REPLACE_WITH_')) {
 const SESSION_COOKIE = 'yuvomi.sid';
 const LEGACY_SESSION_COOKIE = 'oikos.sid';
 
-const expressSession = session({
-  store: sessionStore,
-  secret: process.env.SESSION_SECRET,
-  resave: false,
-  saveUninitialized: false,
-  name: SESSION_COOKIE,
-  cookie: {
+/**
+ * Die Attribute des Session-Cookies - EINE Quelle fuer express-session, die
+ * oikos.sid-Uebernahme und die Auffrischung. Weichen sie ab, legt der Browser
+ * ein zweites Cookie gleichen Namens an (Pfad und Domain gehoeren zur
+ * Identitaet). `secure` wird bei jedem Aufruf frisch gelesen.
+ */
+function sessionCookieOptions() {
+  return {
     httpOnly: true,
     // secure=false by default; set SESSION_SECURE=true when behind an HTTPS reverse proxy
     secure: process.env.SESSION_SECURE === 'true',
@@ -287,8 +309,19 @@ const expressSession = session({
     // (e.g. reverse proxy, direct URL entry), causing 401 on login. Lax is safe
     // because CSRF is protected by the double-submit token and HTTPS secure flag.
     sameSite: 'lax',
-    maxAge: 1000 * 60 * 60 * 24 * 7, // 7 Tage in ms
-  },
+    // Gleitend: `requireAuth` datiert das Cookie gedrosselt nach (#1356).
+    maxAge: SESSION_MAX_AGE_MS,
+    path: '/',
+  };
+}
+
+const expressSession = session({
+  store: sessionStore,
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  name: SESSION_COOKIE,
+  cookie: sessionCookieOptions(),
 });
 
 /**
@@ -312,11 +345,7 @@ function sessionMiddleware(req, res, next) {
       //    die die Session nicht verändern, KEIN Set-Cookie — und der Browser bliebe
       //    nach dem Verwerfen von oikos.sid komplett ohne Session-Cookie zurück.
       res.cookie(SESSION_COOKIE, legacyValue, {
-        httpOnly: true,
-        sameSite: 'lax',
-        secure: process.env.SESSION_SECURE === 'true',
-        maxAge: 1000 * 60 * 60 * 24 * 7,
-        path: '/',
+        ...sessionCookieOptions(),
         encode: (v) => v, // Wert ist bereits kodiert → kein Doppel-Encoding
       });
       // 3. Erst jetzt das Legacy-Cookie verwerfen (der neue Cookie ist gesetzt).
@@ -361,6 +390,21 @@ const twoFactorLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Zu viele Versuche. Bitte warte kurz.', code: 429 },
+});
+
+// Eigener Limiter fuer "Auf anderen Geraeten abmelden" (#1354). Zaehlt alle
+// Antworten wie der Reset-Limiter: jeder Aufruf liest die ganze Sitzungstabelle.
+// Gezaehlt wird JE MITGLIED, nicht je Adresse: hinter einem Proxy ohne
+// `trust proxy` kommt der ganze Haushalt von einer IP, und ein Mitglied saehe
+// sich sonst von den Klicks eines anderen gesperrt. Der Limiter sitzt hinter
+// `requireAuth`, `req.authUserId` steht also immer.
+const sessionRevokeLimiter = rateLimit({
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 60_000,
+  max: parseInt(process.env.RATE_LIMIT_MAX_ATTEMPTS) || 5,
+  keyGenerator: (req) => `user:${req.authUserId}`,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Zu viele Anfragen. Bitte warte kurz.', code: 429 },
 });
 
 // Wie lange ein bestandenes Passwort auf den zweiten Faktor warten darf.
@@ -697,17 +741,30 @@ function updateUserRoleSessions(userId, role) {
   }
 }
 
+/**
+ * Beendet alle Sitzungen eines Mitglieds ausser `exceptSid` und meldet, wie
+ * viele es waren. Der eine Weg fuer Passwortwechsel, 2FA, Admin-Passwort und
+ * "Auf anderen Geraeten abmelden" (#1354). API-Tokens und Wandtabletts sind
+ * keine Zeilen dieser Tabelle und bleiben unberuehrt.
+ */
 function invalidateUserSessions(userId, exceptSid) {
-  const allSessions = db.get().prepare('SELECT sid, sess FROM sessions').all();
+  const allSessions = db.get().prepare('SELECT sid, sess, expired_at FROM sessions').all();
+  const now = Date.now();
+  let ended = 0;
   for (const row of allSessions) {
     if (row.sid === exceptSid) continue;
     try {
       const sess = JSON.parse(row.sess);
       if (sess.userId === userId) {
-        db.get().prepare('DELETE FROM sessions WHERE sid = ?').run(row.sid);
+        const { changes } = db.get().prepare('DELETE FROM sessions WHERE sid = ?').run(row.sid);
+        // Geloescht wird auch eine abgelaufene Zeile, die der 15-Minuten-Sweep
+        // noch nicht erwischt hat - gezaehlt nur eine, die noch galt. Sonst
+        // meldete die Seite "1 andere Sitzung beendet", wo keine mehr lebte.
+        if (row.expired_at > now) ended += changes;
       }
     } catch { /* ignore malformed session */ }
   }
+  return ended;
 }
 
 function authenticateApiToken(req) {
@@ -849,6 +906,7 @@ function requireAuth(req, res, next) {
     req.authRole = req.session.role;
     // Interaktive Sessions kennen kein Token-Scoping.
     req.authScopes = null;
+    refreshSessionCookieIfDue(req, res);
     applyRoleModuleAccess(req);
     return next();
   }
@@ -858,6 +916,74 @@ function requireAuth(req, res, next) {
 /**
  * Prüft ob der authentifizierte User Admin-Rolle hat.
  */
+
+/**
+ * Datiert das Session-Cookie nach - gedrosselt, wie beim Wandtablett (#1356).
+ *
+ * DIE SITZUNG GLEITET: sie endet nach `SESSION_MAX_AGE_MS` ohne Benutzung,
+ * nicht so lange nach der Anmeldung. Der Store verlaengert sich ohnehin bei
+ * jedem Request (`touch`); das Cookie im Browser tat es nie, weil
+ * express-session ohne `rolling` bei unveraenderter Sitzung kein `Set-Cookie`
+ * schickt. Deshalb stellt diese Funktion das Cookie hoechstens alle zwoelf
+ * Stunden SELBST neu aus.
+ *
+ * `req.session` WIRD DABEI NICHT VERAENDERT, und das ist der Kern (Review zu
+ * #1407). Eine veraenderte Sitzung nimmt am Ende des Requests `store.set()`,
+ * und das ist ein `INSERT OR REPLACE`: wurde die Sitzung widerrufen, waehrend
+ * dieser Request noch lief (Passwort-Reset, 2FA, `invalidateUserSessions`,
+ * Kontoloeschung), legte es die geloeschte Zeile fuer 90 Tage neu an. Hier
+ * laufen nur `UPDATE ... WHERE sid = ?` - auf eine geloeschte Zeile wirken sie
+ * nicht. `req.session.cookie` darf sich aendern: express-session nimmt das
+ * Cookie aus seiner Aenderungspruefung heraus, der Request bleibt auf `touch()`.
+ *
+ * DER WERT IST DERSELBE SIGNIERTE, DEN DER BROWSER GESCHICKT HAT - wie bei der
+ * oikos.sid-Uebernahme in `sessionMiddleware`. Neu signiert wird nichts, und
+ * gehoert der Wert nicht zu `req.sessionID`, wird nichts gesetzt.
+ *
+ * DIE FRIST STEHT IM ABLAUF, DEN DER STORE SPEICHERT. `sess.cookie.expires` ist
+ * der Ablauf, den der Browser zuletzt bekommen hat: beim Login, bei jedem
+ * Speichern einer veraenderten Sitzung und hier per `extendCookie`. Faellig ist
+ * die Auffrischung, wenn davon weniger als 90 Tage minus zwoelf Stunden
+ * uebrig sind. Eine Sitzung von vor #1356 (alte Woche) ist das sofort.
+ *
+ * NUR HIER, NICHT IN DER SESSION-MIDDLEWARE: die haengt vor den statischen
+ * Dateien, eine Auffrischung dort schriebe die Session-ID in oeffentlich
+ * cachebare Asset-Antworten (Begruendung bei `SESSION_COOKIE_REFRESH_AFTER_MS`).
+ *
+ * DIE LAUFZEIT IM SPEICHER WIRD MITGESETZT, weil express-session am Ende
+ * `touch()` ruft und auf `originalMaxAge` zuruecksetzt; eine Sitzung mit der
+ * alten Woche schriebe sonst `expired_at` wieder auf sieben Tage.
+ */
+function refreshSessionCookieIfDue(req, res) {
+  const cookie = req.session.cookie;
+  // Ohne Cookie-Objekt ist es keine express-session (Routentests haengen ein
+  // nacktes `{ userId, role }` an) - es gibt nichts nachzudatieren.
+  if (!cookie) return;
+  const now = Date.now();
+  const expiresAt = cookie.expires instanceof Date ? cookie.expires.getTime() : null;
+  if (!sessionCookieRefreshDue(expiresAt, now)) return;
+  const value = signedSessionCookieValue(req);
+  if (!value) return;
+  res.cookie(SESSION_COOKIE, value, {
+    ...sessionCookieOptions(),
+    encode: (v) => v, // Wert ist bereits signiert und kodiert
+  });
+  cookie.maxAge = SESSION_MAX_AGE_MS;
+  cookie.originalMaxAge = SESSION_MAX_AGE_MS;
+  sessionStore.extendCookie(req.sessionID, now + SESSION_MAX_AGE_MS);
+}
+
+/**
+ * Der rohe, signierte `yuvomi.sid`-Wert aus dem Request - nur, wenn er zu
+ * `req.sessionID` gehoert. Erster Treffer, wie `cookie.parse` in express-session.
+ */
+function signedSessionCookieValue(req) {
+  const match = (req.headers.cookie || '').match(/(?:^|;\s*)yuvomi\.sid=([^;]+)/);
+  if (!match) return null;
+  let decoded;
+  try { decoded = decodeURIComponent(match[1]); } catch { return null; }
+  return decoded.startsWith(`s:${req.sessionID}.`) ? match[1] : null;
+}
 
 /**
  * Richtet eine neue Session nach erfolgter Authentifizierung ein.
@@ -886,7 +1012,7 @@ function setupAuthSession(req, res, user) {
         httpOnly: false,
         sameSite: 'lax',
         secure: process.env.SESSION_SECURE === 'true',
-        maxAge: 1000 * 60 * 60 * 24 * 7,
+        maxAge: SESSION_MAX_AGE_MS,
       });
       resolve();
     });
@@ -1014,7 +1140,12 @@ function sanitizeOidcUsername(raw) {
  *   das Konto neu wäre und die automatische Kontoerstellung abgeschaltet ist.
  */
 export function findOrCreateOidcUser(database, claims) {
-  const { sub, iss, email, email_verified, name, preferred_username, username: usernameClaim } = claims;
+  const { sub, iss, email_verified, name, preferred_username, username: usernameClaim } = claims;
+  // Die Adresse EINMAL normalisieren und denselben Wert fuers Verknuepfen und
+  // fuer den Kontakt nehmen: verglich die Verknuepfung die rohe Adresse und
+  // speicherte der Kontakt die getrimmte, verfehlte `'  a@x.de '` das lokale
+  // Konto, und der Haushalt hatte zwei Mitglieder mit derselben Adresse (#1357).
+  const email = typeof claims.email === 'string' ? (claims.email.trim() || undefined) : claims.email;
 
   // Der Issuer aus dem validierten ID-Token kennt sich selbst am besten; OIDC_ISSUER
   // ist nur der konfigurierte Einstiegspunkt und kann davon abweichen (CNAME o. Ä.).
@@ -1081,13 +1212,35 @@ export function findOrCreateOidcUser(database, claims) {
   const display_name = (name || preferred_username || usernameClaim || email || username).slice(0, 128);
   const avatar_color = avatarColors[Math.floor(Math.random() * avatarColors.length)];
 
-  // oidc_provider = Issuer-URL (zukunftssicher für mehrere Provider)
-  const result = database.prepare(`
-    INSERT INTO users (username, display_name, password_hash, avatar_color, role, oidc_sub, oidc_provider)
-    VALUES (?, ?, ?, ?, 'member', ?, ?)
-  `).run(username, display_name, OIDC_PASSWORD_SENTINEL, avatar_color, sub, provider);
+  // 5. Der Kontakt entsteht wie auf jedem anderen Anlageweg (#1357, D#1254):
+  //    Einladung, Ersteinrichtung und Admin rufen `syncFamilyMemberArtifacts`
+  //    in DERSELBEN Transaktion wie das INSERT, sonst kennt der Haushalt die
+  //    Adresse des neuen Mitglieds nicht. Uebernommen werden nur Name und eine
+  //    VERIFIZIERTE Adresse - strikt `email_verified === true`, das Opt-in
+  //    OIDC_TRUST_EMAIL_WITHOUT_VERIFIED_CLAIM gilt dem Verknuepfen, nicht dem
+  //    Kontakt. Kein Bild (eine fremde URL, die CSP laesst nur eigene Bilder
+  //    zu), kein Geburtsdatum (ein Geburtstag, den die Person hier nie
+  //    eingetragen hat) und bewusst nur hier, beim ANLEGEN: Schritt 1 gibt ein
+  //    bekanntes Konto unveraendert zurueck, bis D#848 den Abgleich regelt.
+  const contactEmail = email_verified === true && typeof email === 'string' && email.length <= MAX_TITLE
+    ? email
+    : undefined;
 
-  return database.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
+  // oidc_provider = Issuer-URL (zukunftssicher für mehrere Provider)
+  const userId = database.transaction(() => {
+    const result = database.prepare(`
+      INSERT INTO users (username, display_name, password_hash, avatar_color, role, oidc_sub, oidc_provider)
+      VALUES (?, ?, ?, ?, 'member', ?, ?)
+    `).run(username, display_name, OIDC_PASSWORD_SENTINEL, avatar_color, sub, provider);
+    syncFamilyMemberArtifacts(database, result.lastInsertRowid, {
+      displayName: display_name,
+      email: contactEmail,
+      actorUserId: result.lastInsertRowid,
+    });
+    return result.lastInsertRowid;
+  })();
+
+  return database.prepare('SELECT * FROM users WHERE id = ?').get(userId);
 }
 
 /**
@@ -1785,6 +1938,29 @@ router.post('/logout', requireAuth, csrfMiddleware, (req, res) => {
 });
 
 /**
+ * POST /api/v1/auth/logout-others
+ * Beendet jede andere Sitzung des angemeldeten Mitglieds, die aufrufende bleibt
+ * (#1354). Seit D#1242 lebt eine unbenutzte Sitzung 90 Tage - das hier ist der
+ * Widerruf dazu. Nur fuer eine Browser-Sitzung: ein API-Token oder ein
+ * Wandtablett hat keine "aktuelle" Sitzung, die es ausnehmen koennte, und wuerde
+ * sonst auch die des Mitglieds selbst beenden. Tokens und Tabletts selbst
+ * bleiben gueltig; sie werden unter API-Tokens bzw. Displays widerrufen.
+ * Response: { ok: true, ended: number }
+ */
+router.post('/logout-others', requireAuth, csrfMiddleware, sessionRevokeLimiter, (req, res) => {
+  if (req.authMethod !== 'session' || !req.sessionID) {
+    return res.status(403).json({ error: 'Only a signed-in browser session can sign out other sessions.', code: 403 });
+  }
+  try {
+    const ended = invalidateUserSessions(req.authUserId, req.sessionID);
+    res.json({ ok: true, ended });
+  } catch (err) {
+    log.error('Sign out other sessions error:', err);
+    res.status(500).json({ error: 'Internal server error.', code: 500 });
+  }
+});
+
+/**
  * GET /api/v1/auth/oidc/config
  * Öffentlicher Endpunkt — kein Auth, kein CSRF.
  * Beantwortet vollständig, welche Anmeldewege dieser Server anbietet.
@@ -2169,7 +2345,7 @@ router.get('/me', requireAuth, (req, res) => {
       httpOnly: false,
       sameSite: 'lax',
       secure: process.env.SESSION_SECURE === 'true',
-      maxAge: 1000 * 60 * 60 * 24 * 7,
+      maxAge: SESSION_MAX_AGE_MS,
     });
 
     res.json({

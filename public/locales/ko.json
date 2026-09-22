@@ -141,6 +141,7 @@
         "todayMeals": "오늘의 식사",
         "todayTitle": "오늘의 중요한 일",
         "todayTask": "할 일",
+        "todayTaskStarted": "할 일 · 시작함",
         "todayEvent": "일정",
         "todayShopping": "장보기",
         "todayShoppingCount": "{{count}}개 남음",
@@ -521,7 +522,10 @@
         "historyTickedBy": "체크한 사람: {{name}}",
         "reminderLockedNeedsDueDate": "이 작업에는 변경할 수 없는 알림이 있습니다. 따라서 마감일이 필요합니다.",
         "kanbanColCollapse": "열 접기",
-        "kanbanColExpand": "열 펼치기"
+        "kanbanColExpand": "열 펼치기",
+        "kanbanArchiveDone": "완료된 항목 모두 보관",
+        "kanbanArchiveDoneConfirm": "이 열의 완료된 할 일을 모두 보관할까요?",
+        "kanbanArchiveDoneAction": "보관"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}}개 식사",
@@ -642,7 +646,9 @@
         "duplicateKeepQuantities": "수량 유지",
         "duplicateKeepNotes": "메모 및 링크 유지",
         "duplicateSubmit": "복제",
-        "duplicateError": "목록을 복제할 수 없습니다."
+        "duplicateError": "목록을 복제할 수 없습니다.",
+        "itemStateChecked": "체크됨",
+        "itemStateOpen": "체크 안 됨"
     },
     "meals": {
         "randomizeSuccess_few": "{{count}}개의 식사가 계획되었습니다.",
@@ -2781,7 +2787,21 @@
         "healthPreventionKind": {
             "vaccination": "예방접종",
             "checkup": "검진"
-        }
+        },
+        "backupRestoreKeyLabel": "백업 키",
+        "backupRestoreKeyHint": "이 백업은 다른 설치본에서 만들어졌습니다. 그 설치본의 DB_ENCRYPTION_KEY를 입력하세요. 키는 이번 복원에만 사용되고 저장되지 않으며, 복원 후 데이터는 이 설치본의 키로 암호화됩니다.",
+        "backupRestoreKeyHttpWarning": "이 페이지는 HTTPS로 열려 있지 않습니다. 키가 암호화되지 않은 채 네트워크로 전송됩니다.",
+        "otherSessionsTitle": "다른 기기",
+        "otherSessionsHint": "다른 모든 기기와 브라우저에서 계정을 로그아웃합니다. 이 기기는 로그인 상태로 유지됩니다. API 토큰과 페어링된 벽걸이 디스플레이는 영향을 받지 않습니다.",
+        "otherSessionsButton": "다른 기기에서 로그아웃",
+        "otherSessionsConfirm": "다른 모든 기기에서 로그아웃할까요?",
+        "otherSessionsConfirmDetail": "그곳에서 내 계정으로 로그인한 사람은 다시 로그인해야 합니다. 이 기기는 로그인 상태로 유지됩니다.",
+        "otherSessionsEnded": "다른 세션 {{count}}개를 종료했습니다.",
+        "otherSessionsEnded_one": "다른 세션 {{count}}개를 종료했습니다.",
+        "otherSessionsEnded_few": "다른 세션 {{count}}개를 종료했습니다.",
+        "otherSessionsNone": "다른 기기에 로그인된 계정이 없었습니다.",
+        "otherSessionsError": "다른 기기에서 로그아웃하지 못했습니다.",
+        "otherSessionsTooManyAttempts": "요청이 너무 많습니다. 잠시 기다린 후 다시 시도하세요."
     },
     "login": {
         "tagline": "가족 플래너에 다시 오신 것을 환영합니다.",
@@ -2964,6 +2984,7 @@
         "nameDayClear": "명명 축일 삭제",
         "nameDayHint": "생일과 동일한 알림을 사용합니다.",
         "nameDayIncomplete": "명명 축일의 월과 일을 모두 선택하세요.",
+        "reminderAmountInvalid": "사용자 지정 알림에는 1에서 {{max}} 사이의 정수를 입력하세요.",
         "reminderOnDay": "당일",
         "reminderBefore": "{{duration}} 전",
         "reminderAfterNoon": "정오 {{duration}} 후",
@@ -3233,6 +3254,7 @@
         "folderDeleteContentsChangedToast": "삭제 중 폴더 내용이 변경되어 폴더를 유지했습니다. 성공적으로 삭제된 문서: {{deleted}}.",
         "folderDeleteContentsChangedWithFailuresToast": "폴더 내용이 변경되었고 일부 문서를 삭제하지 못했습니다. 폴더를 유지했습니다.",
         "folderDeleteInProgressToast": "이 폴더는 현재 삭제 중입니다. 작업이 끝난 후 다시 시도하세요.",
+        "folderDeleteNotManageableToast": "아무것도 삭제되지 않았습니다. 이 폴더에 이제 삭제 권한이 없는 문서가 있습니다.",
         "housekeepingFolder": "가사 도우미",
         "calendarItemsFolder": "캘린더 항목",
         "folderBrowserTitle": "폴더",
@@ -3550,7 +3572,8 @@
         "currentMonth": "이번 달",
         "noVisitReportsInMonth": "{{month}}에는 기록된 방문이 없습니다.",
         "settledAdminOnly": "관리자만 변경하거나 삭제할 수 있습니다",
-        "reportVisitsCount": "방문"
+        "reportVisitsCount": "방문",
+        "receiptPresent": "첨부됨"
     },
     "splitExpenses": {
         "title": "공동 지출",
@@ -5450,7 +5473,8 @@
         "confirmSelection": "선택 항목 추가",
         "openAction": "{{name}} 열기",
         "limitReached": "문서는 최대 {{count}}개입니다.",
-        "limitReached_one": "문서는 최대 {{count}}개입니다."
+        "limitReached_one": "문서는 최대 {{count}}개입니다.",
+        "presentHidden": "첨부됨"
     },
     "join": {
         "title": "계정 설정",

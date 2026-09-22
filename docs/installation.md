@@ -887,6 +887,10 @@ incremental runs. That run also merges appointments that earlier versions had st
 occurrences back into their series; an occurrence you had assigned to someone or given its own
 colour is kept as a separate entry instead.
 
+Reminders are not part of the sync. Yuvomi does not import the notifications set on an event in
+Google and sends none of its own, so editing an event in Yuvomi leaves its notifications in Google
+as they were. Reminders in Yuvomi are set in Yuvomi for each person and delivered by Yuvomi itself.
+
 ### Outlook Calendar Push — Microsoft Graph (Optional)
 
 One-way push **Yuvomi → Outlook.com** for personal Microsoft accounts (outlook.com, hotmail.com, M365 Family). Outlook.com does not support CalDAV, so this provider uses the Microsoft Graph API. Yuvomi stays the source of truth: pushed events are created/updated/deleted in Outlook, and every sync run also checks the pushed events for remote drift (one cheap `changeKey` listing per calendar) — events edited in Outlook are reset to the Yuvomi state, events deleted in Outlook are re-created. Multiple family accounts can be connected.
@@ -932,7 +936,9 @@ CalDAV and iCloud sync both ways: events created, edited, deleted, or moved to a
 Yuvomi are applied on the server as well, and changes made there flow back. An outbound change is
 attempted right when you save and retried by the next sync run if the server cannot be reached.
 Editing preserves everything the server holds that Yuvomi does not — attendees, alarms, categories
-and exceptions of a recurring series stay untouched. Events that were already synced before the
+and exceptions of a recurring series stay untouched. Alarms are not imported, though, and Yuvomi
+writes none of its own: an event it creates on the server carries no alarm, and reminders set in
+Yuvomi are delivered by Yuvomi only. Events that were already synced before the
 upgrade to v1.52.0 need one sync run before edits and deletions can reach them.
 
 ### Two-Factor Authentication (Optional)
@@ -1278,6 +1284,27 @@ DB_PATH=/path/to/yuvomi.db node --import dotenv/config scripts/restore-backup.js
 ```
 
 The restore helper validates that the file is a Yuvomi database, and refuses one written by a newer Yuvomi than the one running (update first, then restore), before replacing the active database. It also keeps a pre-restore copy next to the database file for emergency rollback.
+
+### Moving to a new server (backup from another installation)
+
+A backup carries the encryption of the installation that wrote it, so a new installation with a `DB_ENCRYPTION_KEY` of its own cannot open it as it is. Do not swap the new installation's key for the old one: its own database is encrypted with the key it has, and after the swap Yuvomi no longer starts.
+
+Instead, restore with the old installation's key as the **backup key**:
+
+- **Settings → Administration → Backup and restore:** upload the file. When it does not open with this installation's key, the dialog asks for the backup key - enter the old installation's `DB_ENCRYPTION_KEY` and restore again.
+- **API:** send the key as base64 of its UTF-8 bytes in the `X-Backup-Key` header of `POST /api/v1/backup/restore`. It is never read from the URL.
+- **CLI:** pass the key on stdin, never as an argument (it would show up in the process list):
+
+  ```bash
+  IFS= read -rs OLDKEY; printf %s "$OLDKEY" | DB_PATH=/path/to/yuvomi.db node --import dotenv/config scripts/restore-backup.js ./yuvomi-backup.db --backup-key-stdin; unset OLDKEY
+  ```
+
+The backup is decrypted with the backup key and re-encrypted with this installation's own key before it replaces the database; the backup key is used only for that restore and is not stored. A wrong backup key leaves the installation unchanged. The installation's own `DB_ENCRYPTION_KEY` stays as it is - after the restore, and after every restart, it is the one that opens the database.
+
+Two limits:
+
+- An installation **without** a `DB_ENCRYPTION_KEY` refuses a backup key rather than storing the backup decrypted. Set a key first (`openssl rand -hex 32`), restart Yuvomi - its current database is encrypted with it on that start - then restore with the backup key.
+- Over plain HTTP the backup key crosses the network unencrypted, and the dialog says so. Use HTTPS, or restore from a machine on the same local network.
 
 ### Automated Backups
 

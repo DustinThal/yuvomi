@@ -129,6 +129,7 @@
         "todayMeals": "Bữa ăn hôm nay",
         "todayTitle": "Tổng quan hôm nay",
         "todayTask": "Nhiệm vụ",
+        "todayTaskStarted": "Nhiệm vụ · đã bắt đầu",
         "todayEvent": "Sự kiện",
         "todayShopping": "Mua sắm",
         "todayShoppingCount": "{{count}} mục đang mở",
@@ -509,7 +510,10 @@
         "historyTickedBy": "đánh dấu bởi {{name}}",
         "reminderLockedNeedsDueDate": "Công việc này có một nhắc nhở mà bạn không được phép thay đổi. Vì vậy nó cần một ngày đến hạn.",
         "kanbanColCollapse": "Thu gọn cột",
-        "kanbanColExpand": "Mở rộng cột"
+        "kanbanColExpand": "Mở rộng cột",
+        "kanbanArchiveDone": "Lưu trữ tất cả đã xong",
+        "kanbanArchiveDoneConfirm": "Lưu trữ mọi công việc đã xong trong cột này?",
+        "kanbanArchiveDoneAction": "Lưu trữ"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} bữa ăn",
@@ -630,7 +634,9 @@
         "duplicateKeepQuantities": "Giữ số lượng",
         "duplicateKeepNotes": "Giữ ghi chú & liên kết",
         "duplicateSubmit": "Nhân bản",
-        "duplicateError": "Không thể nhân bản danh sách."
+        "duplicateError": "Không thể nhân bản danh sách.",
+        "itemStateChecked": "đã đánh dấu",
+        "itemStateOpen": "chưa đánh dấu"
     },
     "meals": {
         "randomizeSuccess_few": "Đã lên kế hoạch {{count}} bữa ăn.",
@@ -2769,7 +2775,21 @@
         "healthPreventionKind": {
             "vaccination": "Tiêm chủng",
             "checkup": "Kiểm tra"
-        }
+        },
+        "backupRestoreKeyLabel": "Khóa của bản sao lưu",
+        "backupRestoreKeyHint": "Bản sao lưu này đến từ một bản cài đặt khác. Hãy nhập DB_ENCRYPTION_KEY của bản cài đặt đó: khóa chỉ được dùng cho lần khôi phục này và không được lưu, sau đó dữ liệu được mã hóa bằng khóa của bản cài đặt này.",
+        "backupRestoreKeyHttpWarning": "Trang này không được mở qua HTTPS: khóa sẽ đi qua mạng mà không được mã hóa.",
+        "otherSessionsTitle": "Thiết bị khác",
+        "otherSessionsHint": "Đăng xuất tài khoản của bạn trên mọi thiết bị và trình duyệt khác. Thiết bị này vẫn đăng nhập. Mã API và màn hình treo tường đã ghép nối không bị ảnh hưởng.",
+        "otherSessionsButton": "Đăng xuất trên thiết bị khác",
+        "otherSessionsConfirm": "Đăng xuất trên mọi thiết bị khác?",
+        "otherSessionsConfirmDetail": "Ai đang đăng nhập bằng tài khoản của bạn ở đó sẽ phải đăng nhập lại. Thiết bị này vẫn đăng nhập.",
+        "otherSessionsEnded": "Đã kết thúc {{count}} phiên khác.",
+        "otherSessionsEnded_one": "Đã kết thúc {{count}} phiên khác.",
+        "otherSessionsEnded_few": "Đã kết thúc {{count}} phiên khác.",
+        "otherSessionsNone": "Tài khoản của bạn không đăng nhập trên thiết bị nào khác.",
+        "otherSessionsError": "Không thể đăng xuất trên các thiết bị khác.",
+        "otherSessionsTooManyAttempts": "Quá nhiều yêu cầu. Vui lòng đợi một chút rồi thử lại."
     },
     "login": {
         "tagline": "Chào mừng bạn trở lại trình lập kế hoạch gia đình.",
@@ -2952,6 +2972,7 @@
         "nameDayClear": "Xóa ngày tên thánh",
         "nameDayHint": "Dùng cùng lời nhắc với ngày sinh nhật.",
         "nameDayIncomplete": "Chọn cả tháng và ngày của ngày tên thánh.",
+        "reminderAmountInvalid": "Nhập một số nguyên từ 1 đến {{max}} cho lời nhắc tùy chỉnh.",
         "reminderOnDay": "Vào đúng ngày",
         "reminderBefore": "{{duration}} trước",
         "reminderAfterNoon": "{{duration}} sau 12 giờ trưa",
@@ -3233,6 +3254,7 @@
         "folderDeleteContentsChangedToast": "Nội dung thư mục đã thay đổi trong khi xóa, vì vậy thư mục được giữ lại. Tài liệu đã xóa thành công: {{deleted}}.",
         "folderDeleteContentsChangedWithFailuresToast": "Nội dung thư mục đã thay đổi và không thể xóa một số tài liệu. Thư mục được giữ lại.",
         "folderDeleteInProgressToast": "Thư mục này đang được xóa. Hãy thử lại khi thao tác hoàn tất.",
+        "folderDeleteNotManageableToast": "Không có gì bị xóa. Thư mục này hiện có tài liệu mà bạn không được phép xóa.",
         "housekeepingFolder": "Dọn dẹp",
         "calendarItemsFolder": "Mục trên lịch",
         "folderBrowserTitle": "Thư mục",
@@ -3546,7 +3568,8 @@
         "currentMonth": "Hiện tại",
         "noVisitReportsInMonth": "Không có lượt đến của nhân viên được ghi nhận trong {{month}}.",
         "settledAdminOnly": "Chỉ quản trị viên mới có thể sửa hoặc xoá",
-        "reportVisitsCount": "Số lượt đến"
+        "reportVisitsCount": "Số lượt đến",
+        "receiptPresent": "Đã đính kèm"
     },
     "userMultiSelect": {
         "moreUsers": "thêm",
@@ -5450,7 +5473,8 @@
         "confirmSelection": "Thêm mục đã chọn",
         "openAction": "Mở {{name}}",
         "limitReached": "Tối đa {{count}} tài liệu.",
-        "limitReached_one": "Tối đa {{count}} tài liệu."
+        "limitReached_one": "Tối đa {{count}} tài liệu.",
+        "presentHidden": "Đã đính kèm"
     },
     "join": {
         "title": "Thiết lập tài khoản",

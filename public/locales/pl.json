@@ -141,6 +141,7 @@
         "todayMeals": "Dzisiaj na obiad",
         "todayTitle": "Ważne dzisiaj",
         "todayTask": "Zadanie",
+        "todayTaskStarted": "Zadanie · rozpoczęte",
         "todayEvent": "Wydarzenie",
         "todayShopping": "Zakupy",
         "todayShoppingCount": "{{count}} otwarte",
@@ -521,7 +522,10 @@
         "historyTickedBy": "odhaczone przez {{name}}",
         "reminderLockedNeedsDueDate": "To zadanie ma przypomnienie, którego nie możesz zmienić. Dlatego wymaga terminu.",
         "kanbanColCollapse": "Zwiń kolumnę",
-        "kanbanColExpand": "Rozwiń kolumnę"
+        "kanbanColExpand": "Rozwiń kolumnę",
+        "kanbanArchiveDone": "Zarchiwizuj wszystkie ukończone",
+        "kanbanArchiveDoneConfirm": "Zarchiwizować wszystkie ukończone zadania w tej kolumnie?",
+        "kanbanArchiveDoneAction": "Zarchiwizuj"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} posiłki",
@@ -642,7 +646,9 @@
         "duplicateKeepQuantities": "Zachowaj ilości",
         "duplicateKeepNotes": "Zachowaj notatki i linki",
         "duplicateSubmit": "Duplikuj",
-        "duplicateError": "Nie udało się zduplikować listy."
+        "duplicateError": "Nie udało się zduplikować listy.",
+        "itemStateChecked": "odhaczone",
+        "itemStateOpen": "nieodhaczone"
     },
     "meals": {
         "randomizeSuccess_few": "Zaplanowano {{count}} posiłki.",
@@ -2781,7 +2787,21 @@
         "healthPreventionKind": {
             "vaccination": "Szczepienie",
             "checkup": "Badanie"
-        }
+        },
+        "backupRestoreKeyLabel": "Klucz kopii zapasowej",
+        "backupRestoreKeyHint": "Ta kopia zapasowa pochodzi z innej instalacji. Wpisz jej DB_ENCRYPTION_KEY: zostanie użyty tylko do tego przywracania i nie zostanie zapisany, a potem dane będą zaszyfrowane kluczem tej instalacji.",
+        "backupRestoreKeyHttpWarning": "Ta strona nie jest otwarta przez HTTPS: klucz zostanie przesłany przez sieć bez szyfrowania.",
+        "otherSessionsTitle": "Inne urządzenia",
+        "otherSessionsHint": "Wylogowuje twoje konto na wszystkich innych urządzeniach i przeglądarkach. To urządzenie pozostaje zalogowane. Nie dotyczy to tokenów API ani sparowanych wyświetlaczy ściennych.",
+        "otherSessionsButton": "Wyloguj na innych urządzeniach",
+        "otherSessionsConfirm": "Wylogować na wszystkich innych urządzeniach?",
+        "otherSessionsConfirmDetail": "Każdy, kto jest tam zalogowany na twoje konto, musi zalogować się ponownie. To urządzenie pozostaje zalogowane.",
+        "otherSessionsEnded": "Zakończono {{count}} innych sesji.",
+        "otherSessionsEnded_one": "Zakończono {{count}} inną sesję.",
+        "otherSessionsEnded_few": "Zakończono {{count}} inne sesje.",
+        "otherSessionsNone": "Twoje konto nie było zalogowane na żadnym innym urządzeniu.",
+        "otherSessionsError": "Nie udało się wylogować na innych urządzeniach.",
+        "otherSessionsTooManyAttempts": "Zbyt wiele żądań. Poczekaj chwilę i spróbuj ponownie."
     },
     "login": {
         "tagline": "Witaj ponownie w swoim planerze rodzinnym.",
@@ -2964,6 +2984,7 @@
         "nameDayClear": "Usuń imieniny",
         "nameDayHint": "Używa tego samego przypomnienia co urodziny.",
         "nameDayIncomplete": "Wybierz miesiąc i dzień imienin.",
+        "reminderAmountInvalid": "Dla własnego przypomnienia wpisz liczbę całkowitą od 1 do {{max}}.",
         "reminderOnDay": "W tym samym dniu",
         "reminderBefore": "Z wyprzedzeniem: {{duration}}",
         "reminderAfterNoon": "Po południu (+{{duration}})",
@@ -3233,6 +3254,7 @@
         "folderDeleteContentsChangedToast": "Zawartość folderu zmieniła się podczas usuwania, więc folder zachowano. Pomyślnie usunięte dokumenty: {{deleted}}.",
         "folderDeleteContentsChangedWithFailuresToast": "Zawartość folderu zmieniła się, a niektórych dokumentów nie udało się usunąć. Folder zachowano.",
         "folderDeleteInProgressToast": "Ten folder jest obecnie usuwany. Spróbuj ponownie po zakończeniu operacji.",
+        "folderDeleteNotManageableToast": "Nic nie zostało usunięte. Ten folder zawiera teraz dokumenty, których nie możesz usunąć.",
         "housekeepingFolder": "Sprzątanie",
         "calendarItemsFolder": "Wpisy kalendarza",
         "folderBrowserTitle": "Foldery",
@@ -3550,7 +3572,8 @@
         "currentMonth": "Bieżący",
         "noVisitReportsInMonth": "Brak zarejestrowanych wizyt personelu w okresie {{month}}.",
         "settledAdminOnly": "Zmienić lub usunąć może tylko admin",
-        "reportVisitsCount": "Wizyty"
+        "reportVisitsCount": "Wizyty",
+        "receiptPresent": "Dołączony"
     },
     "splitExpenses": {
         "title": "Wspólne wydatki",
@@ -5450,7 +5473,8 @@
         "confirmSelection": "Dodaj wybrane",
         "openAction": "Otwórz {{name}}",
         "limitReached": "Maksymalnie dokumentów: {{count}}.",
-        "limitReached_one": "Maksymalnie dokumentów: {{count}}."
+        "limitReached_one": "Maksymalnie dokumentów: {{count}}.",
+        "presentHidden": "Dołączony"
     },
     "join": {
         "title": "Skonfiguruj konto",

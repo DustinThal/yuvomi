@@ -1,4 +1,8 @@
-import { op, jsonBody, idParam, stringPathParam } from '../helpers.js';
+import { op, jsonBody, idParam, stringPathParam, DOCUMENT_LINK_REFUSAL } from '../helpers.js';
+
+// Die verknuepften Dokumente einer Aufgabe gehoeren dem Dokumente-Modul (#1358).
+const TASK_DOCUMENTS_NOTE = '`document_count` counts the linked documents the caller may see; `GET /api/v1/tasks/{id}` also carries them as `documents`. '
+  + 'Without access to the Documents module (for API tokens a `documents:read` scope) both are `null` - not told, which is not the same as `0` or an empty list.';
 
 export function tasksPaths() {
   return {
@@ -10,7 +14,7 @@ export function tasksPaths() {
       get: op({
         summary: 'List tasks',
         tag: 'Tasks',
-        description: 'Several tags narrow the result: a task must carry all of them. Tag matching ignores case, including non-ASCII letters. Archived tasks are omitted unless asked for.',
+        description: 'Several tags narrow the result: a task must carry all of them. Tag matching ignores case, including non-ASCII letters. Archived tasks are omitted unless asked for. ' + TASK_DOCUMENTS_NOTE,
         params: [
           { name: 'status',      in: 'query', required: false, schema: { type: 'string', enum: ['open', 'in_progress', 'done', 'archived'] }, description: 'Repeatable; several values are OR-ed. "archived" is not a status but the separate archive axis and behaves like the `archived` parameter.' },
           { name: 'archived',    in: 'query', required: false, schema: { type: 'string', enum: ['1', 'only'] }, description: 'Archived tasks are hidden by default. `1` includes them, `only` returns just the archive. A task keeps its own status while archived.' },
@@ -75,12 +79,15 @@ export function tasksPaths() {
     '/api/v1/tasks/tags/apply': {
       post: op({ summary: 'Add or remove tags on several tasks', tag: 'Tasks', stateChanging: true, requestBody: jsonBody(null), description: 'Body: { ids, add?, remove? }. Applies to the tasks in `ids` the caller can see; the others are skipped silently. Locked tasks the caller may not edit are skipped as well and counted in `skipped`, so a partial run is visible rather than silent. Returns the number of tasks actually changed and the refreshed tag list.' }),
     },
+    '/api/v1/tasks/archive': {
+      post: op({ summary: 'Archive several tasks', tag: 'Tasks', stateChanging: true, requestBody: jsonBody(null), description: 'Body: { ids } with at most 500 task IDs. Archives the listed tasks in one transaction under the same rules as PATCH /tasks/{id}/archive, checked per ID: tasks the caller cannot see are skipped silently and not counted, locked tasks the caller may not change (a subtask inherits the lock of its parent) are skipped and counted in `skipped`. A task that is already archived keeps its original `archived_at`. The status of each task is left untouched. Returns `{ data: { archived, skipped } }`, where `archived` counts the tasks this call actually archived. Send the IDs you show rather than every done task, so that nothing completed elsewhere since is archived unseen.' }),
+    },
     '/api/v1/tasks/tags/{tag}': {
       put: op({ summary: 'Rename a task tag', tag: 'Tasks', params: [stringPathParam('tag', 'Tag name')], stateChanging: true, requestBody: jsonBody(null), description: 'Body: { name }. Renames the tag on every task the caller can see. Renaming onto an existing tag merges the two. Tasks the caller cannot see keep the old tag, and so do locked tasks the caller may not edit - those are counted in `skipped`.' }),
       delete: op({ summary: 'Remove a task tag everywhere', tag: 'Tasks', params: [stringPathParam('tag', 'Tag name')], stateChanging: true, description: 'Detaches the tag from every task the caller can see. The tasks themselves stay. Locked tasks the caller may not edit keep the tag and are counted in `skipped`. Unlike categories there is no in-use guard: a tag is nothing but its uses.' }),
     },
     '/api/v1/tasks/{id}': {
-      get: op({ summary: 'Get task', tag: 'Tasks', params: [idParam()] }),
+      get: op({ summary: 'Get task', tag: 'Tasks', params: [idParam()], description: TASK_DOCUMENTS_NOTE }),
       put: op({ summary: 'Update task', tag: 'Tasks', params: [idParam()], stateChanging: true, requestBody: jsonBody(null), description: 'On a locked task (`locked: 1`) only the creator and administrators may change the definition - title, description, category, priority, dates, recurrence, points, visibility, tags, sync target, the lock itself, and assigning other members. Everyone else may still send the full body as long as the outcome differs only in `status` or in their own entry in `assigned_to`; anything else answers 403. The comparison is against the stored values, not against which fields were sent.' }),
       delete: op({ summary: 'Delete task', tag: 'Tasks', params: [idParam()], stateChanging: true, description: 'On a locked task, the creator and administrators only (403 otherwise).' }),
     },
@@ -106,8 +113,8 @@ export function tasksPaths() {
       }),
     },
     '/api/v1/tasks/{id}/documents': {
-      get: op({ summary: 'List documents linked to a task', tag: 'Tasks', params: [idParam()], description: 'Returns family documents linked to the task that are visible to the current user.' }),
-      put: op({ summary: 'Set documents linked to a task', tag: 'Tasks', params: [idParam()], stateChanging: true, documentDeleteConflict: true, requestBody: jsonBody(null), description: 'Replace-set of document_ids; only documents visible to the user are linked. Attachments are part of the task definition, so a locked task answers 403 for anyone but its creator and administrators.' }),
+      get: op({ summary: 'List documents linked to a task', tag: 'Tasks', params: [idParam()], description: 'Returns family documents linked to the task that are visible to the current user. Needs access to the Documents module (for API tokens a `documents:read` scope): without it the answer is 403, after the task itself was found (an invisible task stays 404).', responses: { 200: { description: 'Successful response' }, 401: { $ref: '#/components/responses/Unauthorized' }, 403: { description: 'No access to the Documents module.' }, 404: { description: 'Task not found.' }, 500: { $ref: '#/components/responses/InternalServerError' } } }),
+      put: op({ summary: 'Set documents linked to a task', tag: 'Tasks', params: [idParam()], stateChanging: true, documentDeleteConflict: true, documentLinkRefusal: true, requestBody: jsonBody(null), description: `Replace-set of document_ids; only documents visible to the user are linked. Attachments are part of the task definition, so a locked task answers 403 for anyone but its creator and administrators. ${DOCUMENT_LINK_REFUSAL} Without that access the response \`data\` is \`null\`.` }),
     },
     '/api/v1/tasks/{id}/completions': {
       get: op({

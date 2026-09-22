@@ -129,6 +129,7 @@
         "todayMeals": "Bugünün yemekleri",
         "todayTitle": "Bugün önemli",
         "todayTask": "Görev",
+        "todayTaskStarted": "Görev · başlandı",
         "todayEvent": "Etkinlik",
         "todayShopping": "Alışveriş",
         "todayShoppingCount": "{{count}} açık",
@@ -509,7 +510,10 @@
         "historyTickedBy": "işaretleyen: {{name}}",
         "reminderLockedNeedsDueDate": "Bu görevde değiştirmenize izin verilmeyen bir hatırlatıcı var. Bu nedenle bir bitiş tarihi gerekiyor.",
         "kanbanColCollapse": "Sütunu daralt",
-        "kanbanColExpand": "Sütunu genişlet"
+        "kanbanColExpand": "Sütunu genişlet",
+        "kanbanArchiveDone": "Tamamlananların hepsini arşivle",
+        "kanbanArchiveDoneConfirm": "Bu sütundaki tüm tamamlanan görevler arşivlensin mi?",
+        "kanbanArchiveDoneAction": "Arşivle"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} öğünden",
@@ -630,7 +634,9 @@
         "duplicateKeepQuantities": "Miktarları koru",
         "duplicateKeepNotes": "Notları ve bağlantıları koru",
         "duplicateSubmit": "Kopyala",
-        "duplicateError": "Liste kopyalanamadı."
+        "duplicateError": "Liste kopyalanamadı.",
+        "itemStateChecked": "işaretlendi",
+        "itemStateOpen": "işaretlenmedi"
     },
     "meals": {
         "randomizeSuccess_few": "{{count}} öğün planlandı.",
@@ -2769,7 +2775,21 @@
         "healthPreventionKind": {
             "vaccination": "Aşı",
             "checkup": "Kontrol"
-        }
+        },
+        "backupRestoreKeyLabel": "Yedeğin anahtarı",
+        "backupRestoreKeyHint": "Bu yedek başka bir kurulumdan geliyor. O kurulumun DB_ENCRYPTION_KEY değerini girin: yalnızca bu geri yükleme için kullanılır ve kaydedilmez, ardından veriler bu kurulumun anahtarıyla şifrelenir.",
+        "backupRestoreKeyHttpWarning": "Bu sayfa HTTPS üzerinden açılmadı: anahtar ağ üzerinden şifrelenmeden iletilecek.",
+        "otherSessionsTitle": "Diğer cihazlar",
+        "otherSessionsHint": "Hesabının diğer tüm cihaz ve tarayıcılardaki oturumunu kapatır. Bu cihazda oturum açık kalır. API belirteçleri ve eşlenmiş duvar ekranları etkilenmez.",
+        "otherSessionsButton": "Diğer cihazlarda oturumu kapat",
+        "otherSessionsConfirm": "Diğer tüm cihazlarda oturum kapatılsın mı?",
+        "otherSessionsConfirmDetail": "Orada hesabınla oturum açmış olan herkes yeniden oturum açmak zorunda kalır. Bu cihazda oturum açık kalır.",
+        "otherSessionsEnded": "{{count}} diğer oturum sonlandırıldı.",
+        "otherSessionsEnded_one": "{{count}} diğer oturum sonlandırıldı.",
+        "otherSessionsEnded_few": "{{count}} diğer oturum sonlandırıldı.",
+        "otherSessionsNone": "Hesabın başka hiçbir cihazda oturum açmış değildi.",
+        "otherSessionsError": "Diğer cihazlarda oturum kapatılamadı.",
+        "otherSessionsTooManyAttempts": "Çok fazla istek. Lütfen biraz bekle, sonra tekrar dene."
     },
     "login": {
         "tagline": "Aile planlayıcına tekrar hoş geldin.",
@@ -2979,6 +2999,7 @@
         "nameDayClear": "İsim gününü kaldır",
         "nameDayHint": "Doğum günüyle aynı hatırlatıcıyı kullanır.",
         "nameDayIncomplete": "İsim gününün ayını ve gününü seçin.",
+        "reminderAmountInvalid": "Özel hatırlatıcı için 1 ile {{max}} arasında bir tam sayı girin.",
         "reminderOnDay": "Gününde",
         "reminderBefore": "{{duration}} önce",
         "reminderAfterNoon": "Öğleden {{duration}} sonra",
@@ -3176,6 +3197,7 @@
         "folderDeleteContentsChangedToast": "Silme sırasında klasör içeriği değiştiği için klasör korundu. Başarıyla silinen belgeler: {{deleted}}.",
         "folderDeleteContentsChangedWithFailuresToast": "Klasör içeriği değişti ve bazı belgeler silinemedi. Klasör korundu.",
         "folderDeleteInProgressToast": "Bu klasör şu anda siliniyor. İşlem tamamlandığında tekrar deneyin.",
+        "folderDeleteNotManageableToast": "Hiçbir şey silinmedi. Bu klasörde artık silme izniniz olmayan belgeler var.",
         "housekeepingFolder": "Ev işleri",
         "calendarItemsFolder": "Takvim öğeleri",
         "folderBrowserTitle": "Klasörler",
@@ -3546,7 +3568,8 @@
         "currentMonth": "Bu Ay",
         "noVisitReportsInMonth": "{{month}} döneminde ziyaret kaydedilmedi.",
         "settledAdminOnly": "Yalnızca bir yönetici değiştirebilir veya silebilir",
-        "reportVisitsCount": "Ziyaretler"
+        "reportVisitsCount": "Ziyaretler",
+        "receiptPresent": "Ekli"
     },
     "userMultiSelect": {
         "moreUsers": "daha",
@@ -5450,7 +5473,8 @@
         "confirmSelection": "Seçilenleri ekle",
         "openAction": "{{name}} ögesini aç",
         "limitReached": "En fazla {{count}} belge.",
-        "limitReached_one": "En fazla {{count}} belge."
+        "limitReached_one": "En fazla {{count}} belge.",
+        "presentHidden": "Ekli"
     },
     "join": {
         "title": "Hesabını oluştur",

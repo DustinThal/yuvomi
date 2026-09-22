@@ -141,6 +141,7 @@
         "todayMeals": "Mga pagkain ngayon",
         "todayTitle": "Ngayon sa isang sulyap",
         "todayTask": "Gawain",
+        "todayTaskStarted": "Gawain · sinimulan",
         "todayEvent": "Kaganapan",
         "todayShopping": "Pamimili",
         "todayShoppingCount": "{{count}} ang naka-bukas",
@@ -521,7 +522,10 @@
         "historyTickedBy": "minarkahan ni {{name}}",
         "reminderLockedNeedsDueDate": "May paalala ang gawaing ito na hindi mo maaaring baguhin. Kailangan nito ng petsa ng deadline.",
         "kanbanColCollapse": "Itago ang column",
-        "kanbanColExpand": "Ilabas ang column"
+        "kanbanColExpand": "Ilabas ang column",
+        "kanbanArchiveDone": "I-archive lahat ng tapos na",
+        "kanbanArchiveDoneConfirm": "I-archive ang lahat ng tapos na gawain sa column na ito?",
+        "kanbanArchiveDoneAction": "I-archive"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} na (mga) pagkain",
@@ -642,7 +646,9 @@
         "duplicateKeepQuantities": "Panatilihin ang dami",
         "duplicateKeepNotes": "Panatilihin ang mga tala at link",
         "duplicateSubmit": "I-duplicate",
-        "duplicateError": "Hindi ma-duplicate ang listahan."
+        "duplicateError": "Hindi ma-duplicate ang listahan.",
+        "itemStateChecked": "naka-check",
+        "itemStateOpen": "hindi pa naka-check"
     },
     "meals": {
         "randomizeSuccess_few": "{{count}} na pagkain ang naplano.",
@@ -2781,7 +2787,21 @@
         "healthPreventionKind": {
             "vaccination": "Bakuna",
             "checkup": "Check-up"
-        }
+        },
+        "backupRestoreKeyLabel": "Key ng backup",
+        "backupRestoreKeyHint": "Galing ang backup na ito sa ibang installation. Ilagay ang DB_ENCRYPTION_KEY ng installation na iyon: gagamitin lang ito para sa restore na ito at hindi ise-save, at pagkatapos ay naka-encrypt ang data gamit ang key ng installation na ito.",
+        "backupRestoreKeyHttpWarning": "Hindi bukas ang page na ito sa HTTPS: dadaan ang key sa network nang hindi naka-encrypt.",
+        "otherSessionsTitle": "Ibang device",
+        "otherSessionsHint": "Nila-log out ang account mo sa lahat ng iba pang device at browser. Mananatiling naka-sign in ang device na ito. Hindi apektado ang mga API token at ang mga naka-pair na wall display.",
+        "otherSessionsButton": "Mag-sign out sa ibang device",
+        "otherSessionsConfirm": "Mag-sign out sa lahat ng ibang device?",
+        "otherSessionsConfirmDetail": "Kailangang mag-sign in muli ng sinumang naka-sign in doon gamit ang account mo. Mananatiling naka-sign in ang device na ito.",
+        "otherSessionsEnded": "{{count}} ibang session ang tinapos.",
+        "otherSessionsEnded_one": "{{count}} ibang session ang tinapos.",
+        "otherSessionsEnded_few": "{{count}} ibang session ang tinapos.",
+        "otherSessionsNone": "Hindi naka-sign in ang account mo sa anumang ibang device.",
+        "otherSessionsError": "Hindi nagawang mag-sign out sa ibang device.",
+        "otherSessionsTooManyAttempts": "Masyadong maraming kahilingan. Maghintay sandali, saka subukang muli."
     },
     "login": {
         "tagline": "Maligayang pagbabalik sa iyong family planner.",
@@ -2964,6 +2984,7 @@
         "nameDayClear": "Alisin ang araw ng pangalan",
         "nameDayHint": "Ginagamit ang parehong paalala ng kaarawan.",
         "nameDayIncomplete": "Piliin ang buwan at araw ng araw ng pangalan.",
+        "reminderAmountInvalid": "Maglagay ng buong numero mula 1 hanggang {{max}} para sa sariling paalala.",
         "reminderOnDay": "Sa araw mismo",
         "reminderBefore": "{{duration}} bago",
         "reminderAfterNoon": "{{duration}} pagkalipas ng tanghali",
@@ -3233,6 +3254,7 @@
         "folderDeleteContentsChangedToast": "Nagbago ang laman ng folder habang tinatanggal, kaya pinanatili ang folder. Matagumpay na natanggal na dokumento: {{deleted}}.",
         "folderDeleteContentsChangedWithFailuresToast": "Nagbago ang laman ng folder at may mga dokumentong hindi natanggal. Pinanatili ang folder.",
         "folderDeleteInProgressToast": "Kasalukuyang tinatanggal ang folder na ito. Subukan muli kapag tapos na ang proseso.",
+        "folderDeleteNotManageableToast": "Walang natanggal. May mga dokumento na ngayon sa folder na ito na hindi mo pinapayagang tanggalin.",
         "housekeepingFolder": "Gawaing-bahay",
         "calendarItemsFolder": "Mga item sa kalendaryo",
         "folderBrowserTitle": "Mga folder",
@@ -3550,7 +3572,8 @@
         "currentMonth": "Kasalukuyan",
         "noVisitReportsInMonth": "Walang naitalang pagbisita ng tauhan sa {{month}}.",
         "settledAdminOnly": "Tanging admin ang maaaring baguhin o burahin ito",
-        "reportVisitsCount": "Mga pagbisita"
+        "reportVisitsCount": "Mga pagbisita",
+        "receiptPresent": "Nakalakip"
     },
     "splitExpenses": {
         "title": "Mga hinating gastos",
@@ -5450,7 +5473,8 @@
         "confirmSelection": "Idagdag ang napili",
         "openAction": "Buksan ang {{name}}",
         "limitReached": "Hanggang {{count}} dokumento lang.",
-        "limitReached_one": "Hanggang {{count}} dokumento lang."
+        "limitReached_one": "Hanggang {{count}} dokumento lang.",
+        "presentHidden": "Nakalakip"
     },
     "join": {
         "title": "I-set up ang iyong account",

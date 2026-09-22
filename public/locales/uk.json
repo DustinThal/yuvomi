@@ -129,6 +129,7 @@
         "todayMeals": "Страви на сьогодні",
         "todayTitle": "Важливе сьогодні",
         "todayTask": "Завдання",
+        "todayTaskStarted": "Завдання · розпочато",
         "todayEvent": "Подія",
         "todayShopping": "Покупки",
         "todayShoppingCount": "{{count}} відкрито",
@@ -509,7 +510,10 @@
         "historyTickedBy": "позначив(ла) {{name}}",
         "reminderLockedNeedsDueDate": "Це завдання має нагадування, яке ви не можете змінити. Тому йому потрібен термін виконання.",
         "kanbanColCollapse": "Згорнути стовпець",
-        "kanbanColExpand": "Розгорнути стовпець"
+        "kanbanColExpand": "Розгорнути стовпець",
+        "kanbanArchiveDone": "Архівувати всі виконані",
+        "kanbanArchiveDoneConfirm": "Архівувати всі виконані завдання в цьому стовпці?",
+        "kanbanArchiveDoneAction": "Архівувати"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} прийоми їжі",
@@ -630,7 +634,9 @@
         "duplicateKeepQuantities": "Зберегти кількість",
         "duplicateKeepNotes": "Зберегти нотатки й посилання",
         "duplicateSubmit": "Дублювати",
-        "duplicateError": "Не вдалося дублювати список."
+        "duplicateError": "Не вдалося дублювати список.",
+        "itemStateChecked": "позначено",
+        "itemStateOpen": "не позначено"
     },
     "meals": {
         "randomizeSuccess_few": "Заплановано {{count}} прийоми їжі.",
@@ -2769,7 +2775,21 @@
         "healthPreventionKind": {
             "vaccination": "Щеплення",
             "checkup": "Огляд"
-        }
+        },
+        "backupRestoreKeyLabel": "Ключ резервної копії",
+        "backupRestoreKeyHint": "Ця резервна копія створена іншою інсталяцією. Введіть її DB_ENCRYPTION_KEY: він використовується лише для цього відновлення й не зберігається, після чого дані шифруються ключем цієї інсталяції.",
+        "backupRestoreKeyHttpWarning": "Сторінку відкрито не через HTTPS: ключ буде передано мережею без шифрування.",
+        "otherSessionsTitle": "Інші пристрої",
+        "otherSessionsHint": "Виконує вихід з вашого облікового запису на всіх інших пристроях і в браузерах. Цей пристрій залишиться в системі. API-токени та під’єднані настінні дисплеї не зачіпаються.",
+        "otherSessionsButton": "Вийти на інших пристроях",
+        "otherSessionsConfirm": "Вийти на всіх інших пристроях?",
+        "otherSessionsConfirmDetail": "Усім, хто ввійшов там під вашим обліковим записом, доведеться ввійти знову. Цей пристрій залишиться в системі.",
+        "otherSessionsEnded": "Завершено інших сеансів: {{count}}.",
+        "otherSessionsEnded_one": "Завершено {{count}} інший сеанс.",
+        "otherSessionsEnded_few": "Завершено {{count}} інші сеанси.",
+        "otherSessionsNone": "Ваш обліковий запис не був відкритий на жодному іншому пристрої.",
+        "otherSessionsError": "Не вдалося вийти на інших пристроях.",
+        "otherSessionsTooManyAttempts": "Забагато запитів. Зачекайте трохи й спробуйте знову."
     },
     "login": {
         "tagline": "З поверненням до вашого сімейного планувальника.",
@@ -3020,6 +3040,7 @@
         "nameDayClear": "Видалити іменини",
         "nameDayHint": "Використовується те саме нагадування, що й для дня народження.",
         "nameDayIncomplete": "Виберіть місяць і день іменин.",
+        "reminderAmountInvalid": "Для власного нагадування введіть ціле число від 1 до {{max}}.",
         "reminderOnDay": "У той самий день",
         "reminderBefore": "Заздалегідь: {{duration}}",
         "reminderAfterNoon": "Після полудня (+{{duration}})",
@@ -3176,6 +3197,7 @@
         "folderDeleteContentsChangedToast": "Вміст теки змінився під час видалення, тому теку збережено. Успішно видалено документів: {{deleted}}.",
         "folderDeleteContentsChangedWithFailuresToast": "Вміст теки змінився, а деякі документи не вдалося видалити. Теку збережено.",
         "folderDeleteInProgressToast": "Цю теку зараз видаляють. Спробуйте ще раз після завершення операції.",
+        "folderDeleteNotManageableToast": "Нічого не видалено. У цій теці тепер є документи, які вам не дозволено видаляти.",
         "housekeepingFolder": "Прибирання",
         "calendarItemsFolder": "Елементи календаря",
         "folderBrowserTitle": "Папки",
@@ -3546,7 +3568,8 @@
         "currentMonth": "Поточний",
         "noVisitReportsInMonth": "За період {{month}} відвідувань персоналу не зафіксовано.",
         "settledAdminOnly": "Змінити або видалити може лише адміністратор",
-        "reportVisitsCount": "Відвідування"
+        "reportVisitsCount": "Відвідування",
+        "receiptPresent": "Додано"
     },
     "userMultiSelect": {
         "moreUsers": "інші",
@@ -5450,7 +5473,8 @@
         "confirmSelection": "Додати вибрані",
         "openAction": "Відкрити {{name}}",
         "limitReached": "Не більше ніж {{count}} документів.",
-        "limitReached_one": "Не більше ніж {{count}} документ."
+        "limitReached_one": "Не більше ніж {{count}} документ.",
+        "presentHidden": "Додано"
     },
     "join": {
         "title": "Налаштування облікового запису",

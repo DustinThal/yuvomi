@@ -129,6 +129,7 @@
         "todayMeals": "Dnešní jídla",
         "todayTitle": "Dnešní přehled",
         "todayTask": "Úkol",
+        "todayTaskStarted": "Úkol · zahájeno",
         "todayEvent": "Událost",
         "todayShopping": "Nákupy",
         "todayShoppingCount": "{{count}} otevřených",
@@ -509,7 +510,10 @@
         "historyTickedBy": "odškrtl(a) {{name}}",
         "reminderLockedNeedsDueDate": "Tento úkol má připomínku, kterou nemůžeš změnit. Proto potřebuje datum splnění.",
         "kanbanColCollapse": "Sbalit sloupec",
-        "kanbanColExpand": "Rozbalit sloupec"
+        "kanbanColExpand": "Rozbalit sloupec",
+        "kanbanArchiveDone": "Archivovat vše hotové",
+        "kanbanArchiveDoneConfirm": "Archivovat všechny hotové úkoly v tomto sloupci?",
+        "kanbanArchiveDoneAction": "Archivovat"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} jídla",
@@ -630,7 +634,9 @@
         "duplicateKeepQuantities": "Zachovat množství",
         "duplicateKeepNotes": "Zachovat poznámky a odkazy",
         "duplicateSubmit": "Duplikovat",
-        "duplicateError": "Seznam se nepodařilo duplikovat."
+        "duplicateError": "Seznam se nepodařilo duplikovat.",
+        "itemStateChecked": "odškrtnuto",
+        "itemStateOpen": "neodškrtnuto"
     },
     "meals": {
         "randomizeSuccess_few": "Naplánována {{count}} jídla.",
@@ -2769,7 +2775,21 @@
         "healthPreventionKind": {
             "vaccination": "Očkování",
             "checkup": "Prohlídka"
-        }
+        },
+        "backupRestoreKeyLabel": "Klíč zálohy",
+        "backupRestoreKeyHint": "Tato záloha pochází z jiné instalace. Zadejte její DB_ENCRYPTION_KEY: použije se jen pro toto obnovení a neuloží se, poté jsou data šifrována klíčem této instalace.",
+        "backupRestoreKeyHttpWarning": "Tato stránka není otevřena přes HTTPS: klíč bude po síti přenesen nešifrovaně.",
+        "otherSessionsTitle": "Ostatní zařízení",
+        "otherSessionsHint": "Odhlásí tvůj účet na všech ostatních zařízeních a prohlížečích. Toto zařízení zůstane přihlášené. API tokeny a spárované nástěnné displeje nejsou dotčeny.",
+        "otherSessionsButton": "Odhlásit na ostatních zařízeních",
+        "otherSessionsConfirm": "Odhlásit na všech ostatních zařízeních?",
+        "otherSessionsConfirmDetail": "Kdo je tam přihlášen tvým účtem, se musí přihlásit znovu. Toto zařízení zůstane přihlášené.",
+        "otherSessionsEnded": "Ukončeno {{count}} dalších relací.",
+        "otherSessionsEnded_one": "Ukončena {{count}} další relace.",
+        "otherSessionsEnded_few": "Ukončeny {{count}} další relace.",
+        "otherSessionsNone": "Tvůj účet nebyl přihlášen na žádném jiném zařízení.",
+        "otherSessionsError": "Odhlášení na ostatních zařízeních se nezdařilo.",
+        "otherSessionsTooManyAttempts": "Příliš mnoho požadavků. Chvíli počkej a zkus to znovu."
     },
     "login": {
         "tagline": "Vítejte zpět ve svém rodinném plánovači.",
@@ -3120,7 +3140,8 @@
         "currentMonth": "Aktuální měsíc",
         "noVisitReportsInMonth": "V období {{month}} nebyly zaznamenány žádné návštěvy.",
         "settledAdminOnly": "Upravit nebo smazat ji může jen admin",
-        "reportVisitsCount": "Návštěvy"
+        "reportVisitsCount": "Návštěvy",
+        "receiptPresent": "Přiložen"
     },
     "splitExpenses": {
         "title": "Společné výdaje",
@@ -3364,6 +3385,7 @@
         "folderDeleteContentsChangedToast": "Obsah složky se během odstraňování změnil, proto složka zůstala zachována. Úspěšně odstraněné dokumenty: {{deleted}}.",
         "folderDeleteContentsChangedWithFailuresToast": "Obsah složky se změnil a některé dokumenty se nepodařilo odstranit. Složka zůstala zachována.",
         "folderDeleteInProgressToast": "Tato složka se právě odstraňuje. Zkuste to znovu po dokončení.",
+        "folderDeleteNotManageableToast": "Nic nebylo odstraněno. Tato složka nyní obsahuje dokumenty, které nemáte oprávnění odstranit.",
         "housekeepingFolder": "Domácí práce",
         "calendarItemsFolder": "Položky kalendáře",
         "folderBrowserTitle": "Složky",
@@ -3568,6 +3590,7 @@
         "nameDayClear": "Odebrat svátek",
         "nameDayHint": "Použije stejné upozornění jako narozeniny.",
         "nameDayIncomplete": "Vyberte měsíc i den svátku.",
+        "reminderAmountInvalid": "Pro vlastní připomenutí zadejte celé číslo od 1 do {{max}}.",
         "reminderOnDay": "V daný den",
         "reminderBefore": "Předem: {{duration}}",
         "reminderAfterNoon": "Po 12:00 (+{{duration}})",
@@ -5450,7 +5473,8 @@
         "confirmSelection": "Přidat vybrané",
         "openAction": "Otevřít {{name}}",
         "limitReached": "Nejvýše dokumentů: {{count}}.",
-        "limitReached_one": "Nejvýše dokumentů: {{count}}."
+        "limitReached_one": "Nejvýše dokumentů: {{count}}.",
+        "presentHidden": "Přiložen"
     },
     "join": {
         "title": "Nastavení účtu",

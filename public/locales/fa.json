@@ -141,6 +141,7 @@
         "todayMeals": "غذای امروز",
         "todayTitle": "مهم‌های امروز",
         "todayTask": "کار",
+        "todayTaskStarted": "کار · شروع‌شده",
         "todayEvent": "رویداد",
         "todayShopping": "خرید",
         "todayShoppingCount": "{{count}} باقی‌مانده",
@@ -521,7 +522,10 @@
         "historyTickedBy": "علامت‌زده توسط {{name}}",
         "reminderLockedNeedsDueDate": "این کار یادآوری دارد که اجازه تغییر آن را ندارید. بنابراین به تاریخ سرسید نیاز دارد.",
         "kanbanColCollapse": "جمع کردن ستون",
-        "kanbanColExpand": "باز کردن ستون"
+        "kanbanColExpand": "باز کردن ستون",
+        "kanbanArchiveDone": "بایگانی همه کارهای انجام‌شده",
+        "kanbanArchiveDoneConfirm": "همه کارهای انجام‌شده در این ستون بایگانی شوند؟",
+        "kanbanArchiveDoneAction": "بایگانی"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} وعده",
@@ -642,7 +646,9 @@
         "duplicateKeepQuantities": "حفظ مقدارها",
         "duplicateKeepNotes": "حفظ یادداشت‌ها و لینک‌ها",
         "duplicateSubmit": "کپی",
-        "duplicateError": "کپی کردن فهرست ممکن نشد."
+        "duplicateError": "کپی کردن فهرست ممکن نشد.",
+        "itemStateChecked": "تیک خورده",
+        "itemStateOpen": "تیک نخورده"
     },
     "meals": {
         "randomizeSuccess_few": "{{count}} وعده برنامه‌ریزی شد.",
@@ -2781,7 +2787,21 @@
         "healthPreventionKind": {
             "vaccination": "واکسن",
             "checkup": "معاینه"
-        }
+        },
+        "backupRestoreKeyLabel": "کلید پشتیبان",
+        "backupRestoreKeyHint": "این پشتیبان از نصب دیگری است. DB_ENCRYPTION_KEY آن نصب را وارد کنید: فقط برای همین بازیابی استفاده و ذخیره نمی‌شود، و پس از آن داده‌ها با کلید این نصب رمزگذاری می‌شوند.",
+        "backupRestoreKeyHttpWarning": "این صفحه از طریق HTTPS باز نشده است: کلید بدون رمزگذاری از شبکه عبور می‌کند.",
+        "otherSessionsTitle": "دستگاه‌های دیگر",
+        "otherSessionsHint": "حساب تو را از همهٔ دستگاه‌ها و مرورگرهای دیگر خارج می‌کند. این دستگاه وارد شده باقی می‌ماند. توکن‌های API و نمایشگرهای دیواری جفت‌شده تحت تأثیر قرار نمی‌گیرند.",
+        "otherSessionsButton": "خروج از دستگاه‌های دیگر",
+        "otherSessionsConfirm": "از همهٔ دستگاه‌های دیگر خارج شوید؟",
+        "otherSessionsConfirmDetail": "هر کسی که آنجا با حساب تو وارد شده باید دوباره وارد شود. این دستگاه وارد شده باقی می‌ماند.",
+        "otherSessionsEnded": "{{count}} نشست دیگر پایان یافت.",
+        "otherSessionsEnded_one": "{{count}} نشست دیگر پایان یافت.",
+        "otherSessionsEnded_few": "{{count}} نشست دیگر پایان یافت.",
+        "otherSessionsNone": "حساب تو در هیچ دستگاه دیگری وارد نشده بود.",
+        "otherSessionsError": "خروج از دستگاه‌های دیگر ناموفق بود.",
+        "otherSessionsTooManyAttempts": "درخواست‌های بیش از حد. کمی صبر کنید و دوباره تلاش کنید."
     },
     "login": {
         "tagline": "دوباره به برنامه‌ریز خانوادگی‌تان خوش آمدید.",
@@ -2964,6 +2984,7 @@
         "nameDayClear": "حذف روز نام",
         "nameDayHint": "از همان یادآور تولد استفاده می‌کند.",
         "nameDayIncomplete": "ماه و روزِ روز نام را انتخاب کنید.",
+        "reminderAmountInvalid": "برای یادآوری سفارشی یک عدد صحیح از ۱ تا {{max}} وارد کنید.",
         "reminderOnDay": "همان روز",
         "reminderBefore": "{{duration}} قبل",
         "reminderAfterNoon": "{{duration}} پس از ساعت ۱۲",
@@ -3233,6 +3254,7 @@
         "folderDeleteContentsChangedToast": "محتوای پوشه هنگام حذف تغییر کرد، بنابراین پوشه حفظ شد. اسناد حذف‌شده با موفقیت: {{deleted}}.",
         "folderDeleteContentsChangedWithFailuresToast": "محتوای پوشه تغییر کرد و برخی اسناد حذف نشدند. پوشه حفظ شد.",
         "folderDeleteInProgressToast": "این پوشه در حال حذف است. پس از پایان عملیات دوباره تلاش کنید.",
+        "folderDeleteNotManageableToast": "چیزی حذف نشد. این پوشه اکنون اسنادی دارد که اجازه حذف آن‌ها را ندارید.",
         "housekeepingFolder": "خدمتکار خانه",
         "calendarItemsFolder": "مدخل‌های تقویم",
         "folderBrowserTitle": "پوشه‌ها",
@@ -3550,7 +3572,8 @@
         "currentMonth": "جاری",
         "noVisitReportsInMonth": "در {{month}} هیچ بازدیدی ثبت نشده است.",
         "settledAdminOnly": "فقط یک مدیر می‌تواند آن را تغییر دهد یا حذف کند",
-        "reportVisitsCount": "بازدیدها"
+        "reportVisitsCount": "بازدیدها",
+        "receiptPresent": "پیوست شده"
     },
     "splitExpenses": {
         "title": "هزینه‌های مشترک",
@@ -5450,7 +5473,8 @@
         "confirmSelection": "افزودن انتخاب‌شده‌ها",
         "openAction": "باز کردن {{name}}",
         "limitReached": "حداکثر {{count}} سند.",
-        "limitReached_one": "حداکثر {{count}} سند."
+        "limitReached_one": "حداکثر {{count}} سند.",
+        "presentHidden": "پیوست شده"
     },
     "join": {
         "title": "راه‌اندازی حساب",

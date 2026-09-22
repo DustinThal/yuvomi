@@ -52,6 +52,34 @@ test('fasting clients receive concrete lifecycle schemas, revision transports an
   assert.match(paths['/api/v1/health/export/fasting'].get.description, /same household display-zone completion-date filters as history/);
   assert.ok(paths['/api/v1/health/export/fasting'].get.responses[200].content['text/csv']);
 });
+test('meals apply-plan describes what the route does: additive without replace_existing, 201', () => {
+  // Die Route (server/routes/meals.js, POST /apply-plan) hat belegte Slots nie
+  // uebersprungen; die Spec versprach es seit v2.52.0. Pinnt den korrigierten
+  // Vertrag, das Verhalten selbst halten die Tests in test:meals-routes.
+  const post = buildOpenApiSpec({}).paths['/api/v1/meals/apply-plan'].post;
+  assert.doesNotMatch(post.description, /instead of skipping/);
+  assert.match(post.description, /added next to any meal already planned for the same date and meal type/);
+  assert.match(post.description, /date and meal type pair named in `assignments` is deleted first/);
+  assert.ok(post.responses[201]);
+  assert.ok(!post.responses[200]);
+  assert.ok(post.responses[400]);
+});
+test('meals apply-plan documents skip_occupied and the skipped answer (Discussion #1380)', () => {
+  // Die Route legt mit skip_occupied nur in vorher leere Slots an und nennt
+  // die uebrigen in `skipped`; das Verhalten halten die Tests in test:meals-routes.
+  const post = buildOpenApiSpec({}).paths['/api/v1/meals/apply-plan'].post;
+  const body = post.requestBody.content['application/json'].schema;
+  assert.equal(body.properties.skip_occupied.type, 'boolean');
+  assert.equal(body.properties.replace_existing.type, 'boolean');
+  assert.deepEqual(body.required, ['assignments']);
+  const ok = post.responses[201].content['application/json'].schema;
+  assert.deepEqual(ok.required, ['data']);
+  assert.deepEqual(ok.properties.skipped.items.required, ['index', 'date', 'meal_type', 'reason']);
+  assert.equal(ok.properties.skipped.items.properties.index.type, 'integer');
+  assert.deepEqual(ok.properties.skipped.items.properties.reason.enum, ['occupied']);
+  assert.match(post.description, /`skip_occupied` and `replace_existing` together are refused with 400/);
+  assert.match(post.responses[400].description, /`skip_occupied` that is not a boolean/);
+});
 const indexSrc = readFileSync(new URL('index.js', pathsDir), 'utf8');
 const moduleFiles = readdirSync(pathsDir)
   .filter((f) => f.endsWith('.js') && f !== 'index.js')

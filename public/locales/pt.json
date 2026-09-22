@@ -129,6 +129,7 @@
         "todayMeals": "Refeições de hoje",
         "todayTitle": "Importante hoje",
         "todayTask": "Tarefa",
+        "todayTaskStarted": "Tarefa · iniciada",
         "todayEvent": "Evento",
         "todayShopping": "Compras",
         "todayShoppingCount": "{{count}} abertos",
@@ -509,7 +510,10 @@
         "historyTickedBy": "assinalado por {{name}}",
         "reminderLockedNeedsDueDate": "Esta tarefa tem um lembrete que não pode alterar. Por isso precisa de uma data de vencimento.",
         "kanbanColCollapse": "Recolher coluna",
-        "kanbanColExpand": "Expandir coluna"
+        "kanbanColExpand": "Expandir coluna",
+        "kanbanArchiveDone": "Arquivar todas as concluídas",
+        "kanbanArchiveDoneConfirm": "Arquivar todas as tarefas concluídas desta coluna?",
+        "kanbanArchiveDoneAction": "Arquivar"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} refeições",
@@ -630,7 +634,9 @@
         "duplicateKeepQuantities": "Manter quantidades",
         "duplicateKeepNotes": "Manter notas e links",
         "duplicateSubmit": "Duplicar",
-        "duplicateError": "Não foi possível duplicar a lista."
+        "duplicateError": "Não foi possível duplicar a lista.",
+        "itemStateChecked": "marcado",
+        "itemStateOpen": "não marcado"
     },
     "meals": {
         "randomizeSuccess_few": "{{count}} refeições planeadas.",
@@ -2769,7 +2775,21 @@
         "healthPreventionKind": {
             "vaccination": "Vacina",
             "checkup": "Check-up"
-        }
+        },
+        "backupRestoreKeyLabel": "Chave do backup",
+        "backupRestoreKeyHint": "Este backup vem de outra instalação. Introduza a DB_ENCRYPTION_KEY dessa instalação: é usada apenas neste restauro e não é guardada; depois, os dados ficam cifrados com a chave desta instalação.",
+        "backupRestoreKeyHttpWarning": "Esta página não está aberta por HTTPS: a chave vai atravessar a rede sem cifragem.",
+        "otherSessionsTitle": "Outros dispositivos",
+        "otherSessionsHint": "Termina a sessão da tua conta em todos os outros dispositivos e navegadores. Este dispositivo continua com sessão iniciada. Os tokens de API e os ecrãs de parede emparelhados não são afetados.",
+        "otherSessionsButton": "Terminar sessão noutros dispositivos",
+        "otherSessionsConfirm": "Terminar sessão em todos os outros dispositivos?",
+        "otherSessionsConfirmDetail": "Quem tiver sessão iniciada lá com a tua conta terá de iniciar sessão novamente. Este dispositivo continua com sessão iniciada.",
+        "otherSessionsEnded": "{{count}} outras sessões terminadas.",
+        "otherSessionsEnded_one": "{{count}} outra sessão terminada.",
+        "otherSessionsEnded_few": "{{count}} outras sessões terminadas.",
+        "otherSessionsNone": "A tua conta não tinha sessão iniciada em nenhum outro dispositivo.",
+        "otherSessionsError": "Não foi possível terminar a sessão noutros dispositivos.",
+        "otherSessionsTooManyAttempts": "Demasiados pedidos. Aguarda um momento e tenta novamente."
     },
     "login": {
         "tagline": "Bem-vindo de volta ao teu planeador familiar.",
@@ -2979,6 +2999,7 @@
         "nameDayClear": "Remover dia do nome",
         "nameDayHint": "Usa o mesmo lembrete do aniversário.",
         "nameDayIncomplete": "Selecione o mês e o dia do dia do nome.",
+        "reminderAmountInvalid": "Introduza um número inteiro de 1 a {{max}} para o lembrete personalizado.",
         "reminderOnDay": "No próprio dia",
         "reminderBefore": "{{duration}} antes",
         "reminderAfterNoon": "{{duration}} depois do meio-dia",
@@ -3176,6 +3197,7 @@
         "folderDeleteContentsChangedToast": "O conteúdo da pasta mudou durante a exclusão, por isso a pasta foi mantida. Documentos excluídos: {{deleted}}.",
         "folderDeleteContentsChangedWithFailuresToast": "O conteúdo da pasta mudou e alguns documentos não puderam ser excluídos. A pasta foi mantida.",
         "folderDeleteInProgressToast": "Esta pasta está sendo excluída. Tente novamente quando a operação terminar.",
+        "folderDeleteNotManageableToast": "Nada foi excluído. Esta pasta agora contém documentos que você não tem permissão para excluir.",
         "housekeepingFolder": "Faxina",
         "calendarItemsFolder": "Itens do calendário",
         "folderBrowserTitle": "Pastas",
@@ -3546,7 +3568,8 @@
         "currentMonth": "Atual",
         "noVisitReportsInMonth": "Nenhuma visita da equipe registrada em {{month}}.",
         "settledAdminOnly": "Só um admin pode alterar ou excluir",
-        "reportVisitsCount": "Visitas"
+        "reportVisitsCount": "Visitas",
+        "receiptPresent": "Anexado"
     },
     "userMultiSelect": {
         "moreUsers": "mais",
@@ -5450,7 +5473,8 @@
         "confirmSelection": "Adicionar seleção",
         "openAction": "Abrir {{name}}",
         "limitReached": "No máximo {{count}} documentos.",
-        "limitReached_one": "No máximo {{count}} documento."
+        "limitReached_one": "No máximo {{count}} documento.",
+        "presentHidden": "Anexado"
     },
     "join": {
         "title": "Configura a tua conta",
