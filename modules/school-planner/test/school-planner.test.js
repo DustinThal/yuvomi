@@ -492,6 +492,97 @@ test('alle sieben Tage sind gleich breit', () => {
     'die Zeitspalte hat keine feste Breite mehr');
 });
 
+/* ── Die Schultage ────────────────────────────────────────────────────────── */
+
+test('beide Raster fragen nach den gezeigten Tagen, das Laden nicht', () => {
+  // Die Ansicht zeigt `schoolDateKeys()` / `schoolPositions()`; das Nachladen
+  // holt die volle Woche. Ein ausgeblendeter Samstag ist eine Frage der Anzeige:
+  // "Morgen" sucht den naechsten Schultag weiter ueber alle sieben Tage, und ein
+  // Fenster, das an einer Anzeigevorliebe haengt, waere kuerzer als das, was die
+  // Ansicht danach abfragt.
+  const source = read('index.js');
+  const week = /function renderWeek\(\)\s*\{([\s\S]*?)\n\}/.exec(source);
+  assert.ok(week, 'renderWeek fehlt');
+  assert.match(week[1], /schoolDateKeys\(/, 'die Woche fragt nicht nach den gezeigten Tagen');
+
+  const reloadFn = /async function reload\(\)\s*\{([\s\S]*?)\n\}/.exec(source);
+  assert.ok(reloadFn, 'reload fehlt');
+  assert.match(reloadFn[1], /weekDateKeys\(/, 'das Nachladen holt nicht mehr die volle Woche');
+
+  // Und das Bearbeiten-Raster rechnet seine Spalten aus dem Muster: die
+  // Positionen kommen aus dem Anker, nicht aus einer festen Liste 0..6 - sonst
+  // faellt ein versteckter Tag auf die falsche Spalte.
+  const edit = /function renderEdit\(\)\s*\{([\s\S]*?)\n\}/.exec(source);
+  assert.ok(edit, 'renderEdit fehlt');
+  assert.match(edit[1], /schoolPositions\(anchor, state\.schoolDays\)/,
+    'das Bearbeiten-Raster zaehlt weiter alle sieben Spalten');
+  assert.doesNotMatch(edit[1], /Array\.from\(\{ length: 7 \}/,
+    'die feste 7 steht noch im Raster');
+});
+
+test('die Wahl der Schultage liegt beim Geraet und ueberlebt das Neuladen', () => {
+  // Ein Modul darf keine Schluessel in /preferences anlegen (der Server prueft
+  // gegen eine feste Liste) und sieht die Datenbank nicht - der Browserspeicher
+  // ist der einzige Ort, den es gibt. Was nicht gespeichert wird, ist beim
+  // naechsten Besuch wieder Montag bis Freitag.
+  const source = read('index.js');
+  const save = /function saveSettings\(\)\s*\{([\s\S]*?)\n\}/.exec(source);
+  assert.ok(save, 'saveSettings fehlt');
+  assert.match(save[1], /schoolDays: state\.schoolDays/, 'die Tage werden nicht mitgespeichert');
+  assert.match(save[1], /SETTINGS_KEY/, 'geschrieben wird nicht unter dem Schluessel des Moduls');
+
+  const load = /function loadSettings\(\)\s*\{([\s\S]*?)\n\}/.exec(source);
+  assert.ok(load, 'loadSettings fehlt');
+  assert.match(load[1], /normalizeSchoolDays\(raw\?\.schoolDays\)/,
+    'die gespeicherten Tage werden ungeprueft uebernommen');
+  // Und `render()` setzt sie beim Einstieg in den Zustand - ein gelesener Wert,
+  // der nirgends ankommt, ist keiner.
+  assert.match(source, /state\.schoolDays = state\.settings\.schoolDays/,
+    'die geladenen Tage erreichen den Zustand nicht');
+});
+
+test('das Panel zeigt die Tage und verschweigt nichts', () => {
+  const source = read('index.js');
+  const fn = /function renderSchoolDays\(\)\s*\{([\s\S]*?)\n\}/.exec(source);
+  assert.ok(fn, 'renderSchoolDays fehlt');
+  // Ein Kaestchen je Wochentag, mit dem Zustand als `checked` - ein Kaestchen,
+  // das seine Auswahl nicht zeigt, ist ein Schalter ohne Stellung.
+  assert.match(fn[1], /WEEKDAY_KEYS\.map\(/, 'es gibt nicht je Wochentag ein Kaestchen');
+  assert.match(fn[1], /data-school-day="\$\{day\}"\$\{chosen\.has\(Number\(day\)\) \? ' checked' : ''\}/,
+    'das Kaestchen zeigt seine Auswahl nicht');
+  // Und was ein versteckter Tag verschwinden laesst, wird gezaehlt und gesagt:
+  // eine Einstellung, die Unterricht still verschwinden laesst, sieht aus wie
+  // ein aufgeraeumter Plan und ist es nicht.
+  assert.match(fn[1], /hiddenSubjects\(state\.patternDays/, 'es wird nicht geprueft, was versteckt wird');
+  assert.match(fn[1], /hidden\.size[\s\S]*?days\.hidden/, 'der Hinweis auf versteckte Stunden fehlt');
+  // Das Panel haengt an der Bearbeiten-Ansicht - dort, wo der Plan gemacht wird.
+  const edit = /function renderEdit\(\)\s*\{([\s\S]*?)\n\}/.exec(source);
+  assert.match(edit[1], /\$\{renderSchoolDays\(\)\}/, 'das Panel wird nirgends gezeichnet');
+  // `.form-check` ist die Checkbox des Kerns - Groesse, Trefferflaeche und die
+  // Eine-Stimme-Regel stehen dort und nicht hier.
+  assert.match(fn[1], /class="form-check"/, 'das Kaestchen bringt eigene Masse mit');
+});
+
+test('der letzte Tag laesst sich nicht abwaehlen', () => {
+  // Ein Plan ohne Spalten sieht aus wie ein Fehler statt wie eine Wahl. Die
+  // Regel steht im Griff und nicht in `normalizeSchoolDays()`: dort ist eine
+  // leere Liste die Voreinstellung, weil gespeicherter Unsinn nicht in einem
+  // leeren Plan enden darf - hier ist es ein Griff, den jemand gerade tut, und
+  // der gehoert abgelehnt statt still umgedeutet.
+  const fn = /function toggleSchoolDay\(input\)\s*\{([\s\S]*?)\n\}/.exec(read('index.js'));
+  assert.ok(fn, 'toggleSchoolDay fehlt');
+  const body = fn[1].replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+  const guard = body.indexOf('if (!next.size)');
+  const store = body.indexOf('state.schoolDays = normalizeSchoolDays');
+  assert.ok(guard > -1, 'der letzte Tag laesst sich abwaehlen');
+  assert.ok(store > -1, 'die Wahl erreicht den Zustand nicht');
+  assert.ok(guard < store, 'erst speichern, dann ablehnen');
+  assert.match(body.slice(guard, guard + 80) + body.slice(guard), /days\.lastOne/,
+    'die Ablehnung wird nicht erklaert');
+  // Und der Speicher bleibt unberuehrt, bis die Wahl feststeht.
+  assert.match(body.slice(guard, store), /return;/, 'die abgelehnte Wahl laeuft weiter');
+});
+
 test('die Kachel rechnet mit den echten Rastermassen des Kerns', () => {
   // `widgetRowBudget()` nennt zwei Zahlen aus dem Kern: die Hoehe einer
   // Rasterzeile (132px, `grid-auto-rows` in dashboard.css) und den Abstand

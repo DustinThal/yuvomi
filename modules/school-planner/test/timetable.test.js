@@ -25,6 +25,11 @@ import {
   isoWeekday,
   isWeekend,
   weekDateKeys,
+  SCHOOL_DAYS_DEFAULT,
+  normalizeSchoolDays,
+  schoolDateKeys,
+  schoolPositions,
+  hiddenSubjects,
   subjectColor,
   SUBJECT_COLORS,
   relativeLuminance,
@@ -398,6 +403,91 @@ test('spreadSubjectColor kann eine Farbe auch wieder wegnehmen', () => {
   assert.deepEqual(spreadSubjectColor(rows, { subjectFieldId: 1, subject: '' }), rows);
   assert.deepEqual(spreadSubjectColor(rows, { subjectFieldId: 1, subject: 'Mathematik' }), rows);
   assert.deepEqual(spreadSubjectColor(null, { subjectFieldId: 1, colorFieldId: 2, subject: 'Mathematik' }), []);
+});
+
+/* ── Welche Tage ein Schultag sind ────────────────────────────────────────── */
+
+test('normalizeSchoolDays laesst nur echte Wochentage durch', () => {
+  // Der Wert kommt aus dem Browserspeicher: er kann fehlen, von Hand verstellt
+  // oder aus einer aelteren Fassung sein. Nichts davon darf die Ansicht
+  // anhalten.
+  assert.deepEqual(normalizeSchoolDays([5, 1, 3]), [1, 3, 5], 'aufsteigend, nicht in Eingabereihenfolge');
+  assert.deepEqual(normalizeSchoolDays(['2', '4']), [2, 4], 'Zeichenketten aus dem Speicher zaehlen');
+  assert.deepEqual(normalizeSchoolDays([1, 1, 2]), [1, 2], 'Doppelte fallen heraus');
+  assert.deepEqual(normalizeSchoolDays([0, 8, 1.5, null, 'x', 3]), [3], 'was kein Wochentag ist, faellt heraus');
+  // Nichts uebrig heisst Voreinstellung, nicht "keine Woche": ein Plan ohne
+  // Spalten sieht aus wie ein Fehler statt wie eine Wahl.
+  assert.deepEqual(normalizeSchoolDays([]), [1, 2, 3, 4, 5]);
+  assert.deepEqual(normalizeSchoolDays(null), [1, 2, 3, 4, 5]);
+  assert.deepEqual(normalizeSchoolDays('1,2'), [1, 2, 3, 4, 5], 'keine Liste, keine Wahl');
+  assert.deepEqual(normalizeSchoolDays([7, 6]), [6, 7], 'das Wochenende ist waehlbar');
+  // Und die Voreinstellung selbst ist unveraenderlich - der Aufrufer bekommt
+  // eine Kopie und kann sie nicht fuer alle anderen umschreiben.
+  assert.deepEqual([...SCHOOL_DAYS_DEFAULT], [1, 2, 3, 4, 5]);
+  assert.notEqual(normalizeSchoolDays([]), SCHOOL_DAYS_DEFAULT);
+});
+
+test('schoolDateKeys haelt die Ordnung der Haushaltswoche', () => {
+  // Montag, 2026-01-05. Ohne Wahl bleibt es bei Montag bis Freitag.
+  assert.deepEqual(schoolDateKeys(MONDAY, 1), [
+    '2026-01-05', '2026-01-06', '2026-01-07', '2026-01-08', '2026-01-09',
+  ]);
+  // Mit Samstag dazu kommt er ANS ENDE, nicht an den Anfang: die Woche des
+  // Haushalts bleibt die Ordnung, gefiltert wird nur.
+  assert.deepEqual(schoolDateKeys(MONDAY, 1, [1, 2, 3, 4, 5, 6]).at(-1), '2026-01-10');
+  // Ein Haushalt, dessen Woche am Sonntag beginnt, bekommt Sonntag zuerst: die
+  // Woche um Montag, den 05.01., faengt am Sonntag, dem 04.01. an - und die
+  // Auswahl steht in DIESER Ordnung, nicht in der des ISO-Wochentags.
+  assert.deepEqual(schoolDateKeys(MONDAY, 0), [
+    '2026-01-05', '2026-01-06', '2026-01-07', '2026-01-08', '2026-01-09',
+  ]);
+  assert.deepEqual(schoolDateKeys(MONDAY, 0, [1, 7]), ['2026-01-04', '2026-01-05']);
+  // Eine Auswahl ohne Reihenfolge in der Eingabe aendert nichts an der Ausgabe.
+  assert.deepEqual(schoolDateKeys(MONDAY, 1, [5, 3, 1]), ['2026-01-05', '2026-01-07', '2026-01-09']);
+  // Ein kaputtes Datum bleibt leer und wird nicht zur Voreinstellungswoche.
+  assert.deepEqual(schoolDateKeys('kein Datum', 1), []);
+});
+
+test('schoolPositions rechnet aus dem Anker, nicht aus dem Index', () => {
+  // Das Bearbeiten-Raster ist das Muster: Spalte 3 ist "drei Tage nach dem
+  // Anker". Ist der Anker ein Samstag, faellt der Samstag auf Position 0 - und
+  // die versteckte Spalte ist dann nicht die sechste.
+  assert.deepEqual(schoolPositions(MONDAY), [0, 1, 2, 3, 4]);
+  const saturday = '2026-01-10';
+  assert.deepEqual(isoWeekday(saturday), 6);
+  assert.deepEqual(schoolPositions(saturday), [2, 3, 4, 5, 6], 'Sonntag und Montag stehen am Rand');
+  assert.deepEqual(schoolPositions(saturday, [6, 7]), [0, 1]);
+  // Ohne brauchbare Wahl bleibt es bei der Voreinstellung - und die Positionen
+  // sind immer echt.
+  assert.deepEqual(schoolPositions(MONDAY, []), [0, 1, 2, 3, 4]);
+});
+
+test('hiddenSubjects sagt, was auf einem versteckten Tag stehen bleibt', () => {
+  // Der Plan des gemeldeten Falls: Montag bis Freitag traegt Stunden, der
+  // Samstag auch - und der Samstag ist ausgeblendet.
+  const days = [
+    { position: 0, field_values: { 1: 'Mathematik' } },
+    { position: 5, field_values: { 1: 'Sport' } },
+    { position: 5, field_values: { 1: 'Musik' } },
+    { position: 6, field_values: { 1: ' ' } },
+    { position: 6, field_values: {} },
+  ];
+  const hidden = hiddenSubjects(days, MONDAY, [1, 2, 3, 4, 5], { subjectFieldId: 1 });
+  assert.deepEqual([...hidden.keys()], [6], 'nur der Samstag, und nur einmal');
+  assert.deepEqual(hidden.get(6), ['Sport', 'Musik']);
+  // Ohne versteckte Tage gibt es nichts zu sagen - und ohne Fach-Feld auch
+  // nicht, weil dann nichts nachzuweisen ist.
+  assert.equal(hiddenSubjects(days, MONDAY, [1, 2, 3, 4, 5, 6, 7], { subjectFieldId: 1 }).size, 0);
+  assert.equal(hiddenSubjects(days, MONDAY, [1, 2, 3, 4, 5], {}).size, 0);
+  // Ein laengerer Zyklus ist erlaubt (A/B-Wochen): Position 12 ist derselbe
+  // Samstag wie Position 5 und wird genauso gezaehlt - ein Deckel bei 6 wuerde
+  // genau die Stunden verschweigen, fuer die es diesen Hinweis gibt.
+  const longCycle = hiddenSubjects([{ position: 12, field_values: { 1: 'Sport' } }], MONDAY, [1, 2, 3, 4, 5], { subjectFieldId: 1 });
+  assert.deepEqual(longCycle.get(6), ['Sport'], 'die zweite Woche eines 14er-Zyklus faellt unter den Tisch');
+  // Was keine Position ist, wird nicht auf einen Wochentag geraten.
+  assert.equal(hiddenSubjects([{ position: -1, field_values: { 1: 'Sport' } }], MONDAY, [1, 2, 3, 4, 5], { subjectFieldId: 1 }).size, 0);
+  assert.equal(hiddenSubjects([{ position: 'x', field_values: { 1: 'Sport' } }], MONDAY, [1, 2, 3, 4, 5], { subjectFieldId: 1 }).size, 0);
+  assert.equal(hiddenSubjects(days, 'kein Datum', [1, 2, 3, 4, 5], { subjectFieldId: 1 }).size, 0);
 });
 
 /* ── Die Farbe gehoert dem Fach, nicht der Zeile ──────────────────────────── */

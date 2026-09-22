@@ -77,11 +77,16 @@ import {
   addDays,
   buildWeekGrid,
   formatTimeRange,
+  hiddenSubjects,
   lessonFromPatternDay,
   minutesOfTime,
   nextDateWithLessons,
   normalizeColor,
+  normalizeSchoolDays,
   readableTextOn,
+  SCHOOL_DAYS_DEFAULT,
+  schoolDateKeys,
+  schoolPositions,
   spreadSubjectColor,
   subjectColor,
   subjectColors,
@@ -135,6 +140,7 @@ const state = {
   entries: [],
   weekStart: 1,
   weekOffset: 0,
+  schoolDays: [...SCHOOL_DAYS_DEFAULT],
   settings: null,
   me: null,
 };
@@ -145,16 +151,19 @@ function loadSettings() {
   // Gelesen wird ueber `data.js#readSettings()` - die Kachel liest dieselbe
   // Wahl, und zwei Leser mit zwei Auffassungen vom Schluessel sind genau die
   // Dublette, die dieses Modul vermeidet. Hier kommt nur dazu, was allein die
-  // Seite angeht: welche Ansicht zuletzt offen war.
+  // Seite angeht: welche Ansicht zuletzt offen war und welche Tage Schultage
+  // sind.
   const shared = readSettings();
   let view = 'tomorrow';
+  let schoolDays = [...SCHOOL_DAYS_DEFAULT];
   try {
     const raw = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
     if (raw?.view === 'week' || raw?.view === 'edit') view = raw.view;
+    schoolDays = normalizeSchoolDays(raw?.schoolDays);
   } catch {
     // Ein unlesbarer Stand ist kein Fehler, sondern eine fehlende Vorliebe.
   }
-  return { pupilId: shared.pupilId, patternId: shared.patternId, view };
+  return { pupilId: shared.pupilId, patternId: shared.patternId, view, schoolDays };
 }
 
 function saveSettings() {
@@ -163,6 +172,7 @@ function saveSettings() {
       pupilId: state.pupilId,
       patternId: state.pattern?.id ?? null,
       view: state.view,
+      schoolDays: state.schoolDays,
     }));
   } catch {
     // Ein voller oder gesperrter Speicher darf die Seite nicht anhalten: die
@@ -611,6 +621,12 @@ async function runSetup() {
  * Das Fenster reicht von gestern bis drei Wochen nach der angezeigten Woche:
  * "Morgen" braucht einen Tag, das Raster sieben, und die Suche nach dem
  * naechsten Schultag soll nicht bei jedem Blaettern neu laden.
+ *
+ * Hier steht `weekDateKeys()` und NICHT `schoolDateKeys()`: das Fenster ist die
+ * volle Woche, auch wenn nur ein Teil davon gezeigt wird. Ein ausgeblendeter
+ * Samstag ist eine Frage der Anzeige - "Morgen" und die Suche nach dem naechsten
+ * Schultag sehen ihn weiterhin, und ein Fenster, das an einer Anzeigevorliebe
+ * haengt, waere kuerzer als das, was die Ansicht abfragt.
  */
 async function reload() {
   await fetchAll();
@@ -730,7 +746,7 @@ function renderTomorrow() {
  */
 function renderWeek() {
   const today = todayKey();
-  const keys = weekDateKeys(addDays(today, state.weekOffset * 7), state.weekStart);
+  const keys = schoolDateKeys(addDays(today, state.weekOffset * 7), state.weekStart, state.schoolDays);
   const byDate = lessonsOfPeriod(keys);
   const grid = buildWeekGrid(byDate, keys);
 
@@ -815,13 +831,14 @@ function renderEdit() {
   // anderen Zeile als der, die gerade gezeichnet wird, und ohne den Vorrat
   // faerbte das Raster eine neu getippte Stunde mit der gerechneten.
   const palette = subjectPalette();
+  const positions = schoolPositions(anchor, state.schoolDays);
 
-  const head = Array.from({ length: 7 }, (_, position) => `<th scope="col" class="school-grid__head">
+  const head = positions.map((position) => `<th scope="col" class="school-grid__head">
       <span class="school-grid__dow">${esc(weekdayLabel(addDays(anchor, position)))}</span>
     </th>`).join('');
 
   const body = periods.map((period) => {
-    const cells = Array.from({ length: 7 }, (_, position) => {
+    const cells = positions.map((position) => {
       const row = state.patternDays.find((candidate) => Number(candidate.position) === position
         && Number(candidate.shift_type_id) === Number(period.id));
       const lesson = row ? lessonFromPatternDay(row, typeById, state.fieldIds, palette) : null;
@@ -860,7 +877,7 @@ function renderEdit() {
     <thead><tr><th scope="col" class="school-grid__corner"><span class="sr-only">${esc(t('extensions.school-planner.week.time'))}</span></th>${head}</tr></thead>
     <tbody>${body}</tbody>
   </table>
-</section>${renderColors()}`;
+</section>${renderSchoolDays()}${renderColors()}`;
 }
 
 /** Die Schichtarten, die als Unterrichtsstunde durchgehen: mit Uhrzeit, nach Zeit sortiert. */
@@ -1040,6 +1057,101 @@ function renderColors() {
  */
 function keepColorsOpen() {
   const panel = state.container?.querySelector('#school-colors');
+  if (panel) panel.open = true;
+}
+
+/* ── Schultage ────────────────────────────────────────────────────────────── */
+
+/** Die Wochentage in der Reihenfolge, in der ein Kalender sie zeigt. */
+const WEEKDAY_KEYS = ['1', '2', '3', '4', '5', '6', '7'];
+
+/**
+ * Der Name eines ISO-Wochentags.
+ *
+ * `weekdayLabel()` will ein Datum, und ein Wochentag allein hat keines. Der
+ * 05.01.2026 ist ein Montag - an ihm gemessen ist Tag 1 der Montag und Tag 7
+ * der Sonntag. Die Namen kommen damit aus derselben Sprache wie die des
+ * Rasters, statt aus einer zweiten Liste, die nur auf Deutsch stimmt.
+ */
+function weekdayName(isoDay) {
+  return weekdayLabel(addDays('2026-01-05', Number(isoDay) - 1));
+}
+
+/**
+ * Welche Tage der Plan zeigt.
+ *
+ * Diese Wahl liegt im Browserspeicher und nicht im Haushalt, und das ist keine
+ * Nachlaessigkeit: ein Modul darf keine Schluessel in `/preferences` anlegen
+ * (der Server prueft gegen eine feste Liste), und in die Datenbank sieht es
+ * nicht (MODULES.md). Was bleibt, ist das Geraet - am Kuechenrechner darf
+ * stehen, was am Handy stoert. Der Hinweis im Panel sagt das.
+ *
+ * Der letzte Tag laesst sich nicht abwaehlen: ein Plan ohne Spalten sieht aus
+ * wie ein Fehler statt wie eine Wahl.
+ */
+function renderSchoolDays() {
+  const chosen = new Set(state.schoolDays);
+  const boxes = WEEKDAY_KEYS.map((day) => `<label class="form-check">
+      <input type="checkbox" data-school-day="${day}"${chosen.has(Number(day)) ? ' checked' : ''}>
+      <span>${esc(weekdayName(day))}</span>
+    </label>`).join('');
+
+  // Was ein versteckter Tag verschwinden laesst, wird gesagt und nicht
+  // verschwiegen: das Raster saehe sonst aufgeraeumt aus und waere es nicht.
+  const hidden = hiddenSubjects(state.patternDays, state.pattern?.anchor_date, state.schoolDays, {
+    subjectFieldId: state.fieldIds.subject,
+  });
+  const warning = hidden.size
+    ? `<p class="school-hint school-hint--notice">${esc(t('extensions.school-planner.days.hidden', {
+      days: [...hidden.keys()].map(weekdayName).join(', '),
+      subjects: [...new Set([...hidden.values()].flat())].join(', '),
+    }))}</p>`
+    : '';
+
+  return `<details class="school-panel school-colors" id="school-days">
+  <summary class="school-colors__summary">${esc(t('extensions.school-planner.days.heading', {
+    count: state.schoolDays.length,
+  }))}</summary>
+  <p class="school-hint">${esc(t('extensions.school-planner.days.hint'))}</p>
+  <div class="school-dayboxes" role="group" aria-label="${esc(t('extensions.school-planner.days.heading', { count: state.schoolDays.length }))}">${boxes}</div>
+  ${warning}
+</details>`;
+}
+
+/**
+ * Einen Tag an- oder abwaehlen.
+ *
+ * Die Regel steht hier und nicht in `normalizeSchoolDays()`: dort ist eine leere
+ * Liste die Voreinstellung, weil ein gespeicherter Unsinn nicht in einem leeren
+ * Plan enden darf. Hier ist "nichts mehr uebrig" dagegen ein Griff, den jemand
+ * gerade tut - und der gehoert abgelehnt und nicht stillschweigend in Montag bis
+ * Freitag umgedeutet.
+ */
+function toggleSchoolDay(input) {
+  const day = Number(input.dataset.schoolDay);
+  const next = new Set(state.schoolDays);
+  if (input.checked) next.add(day); else next.delete(day);
+
+  if (!next.size) {
+    state.notice = t('extensions.school-planner.days.lastOne');
+    renderShell();
+    // Das Haekchen steht nach dem Neuzeichnen wieder da, wo es war - und das
+    // Panel bleibt offen, sonst waere der Satz, der das erklaert, das Einzige,
+    // was von dem Griff uebrig bleibt.
+    keepDaysOpen();
+    return;
+  }
+
+  state.schoolDays = normalizeSchoolDays([...next]);
+  saveSettings();
+  state.notice = '';
+  renderShell();
+  keepDaysOpen();
+}
+
+/** Wie `keepColorsOpen()` - nach dem Neuzeichnen steht das Panel wieder offen. */
+function keepDaysOpen() {
+  const panel = state.container?.querySelector('#school-days');
   if (panel) panel.open = true;
 }
 
@@ -1235,6 +1347,7 @@ export async function render(container, context = {}) {
   state.me = context.user ?? null;
   state.settings = loadSettings();
   state.view = state.settings.view;
+  state.schoolDays = state.settings.schoolDays;
   state.loading = true;
   state.error = '';
   state.notice = '';
@@ -1306,6 +1419,15 @@ export async function render(container, context = {}) {
         renderShell();
         keepColorsOpen();
       });
+      return;
+    }
+
+    // Eine Schultag-Wahl braucht keinen Server und kein Nachladen: die
+    // geladenen Eintraege decken drei Wochen ab, und welche Spalten davon
+    // gezeigt werden, entscheidet allein die Ansicht.
+    const dayBox = target.closest('[data-school-day]');
+    if (dayBox) {
+      toggleSchoolDay(dayBox);
       return;
     }
 

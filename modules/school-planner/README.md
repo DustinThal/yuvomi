@@ -57,14 +57,39 @@ card under *Schichtarten* in the shift planner. Both write the same row.
 - **Morgen** - the next day that has lessons, not literally tomorrow. On a Friday
   evening it shows Monday and says so, because "no lessons" is the correct answer
   and a useless one.
-- **Woche** - the grid. Rows are times, columns are the seven days, colours come
+- **Woche** - the grid. Rows are times, columns are the school days, colours come
   from the subject. Week navigation, and today is marked.
 - **Bearbeiten** - the recurring grid. Tap a cell for subject, room and teacher,
   or tap a period's time to change when it starts and ends.
+- **Schultage** - at the bottom of **Bearbeiten**, one checkbox per weekday,
+  Monday to Friday by default. Saturday and Sunday are columns that mostly stand
+  empty; hiding them makes the grid narrower without touching the plan. The last
+  remaining day cannot be switched off - a timetable without columns looks like a
+  fault rather than a choice - and if a hidden day still carries lessons, the
+  panel says which.
 - **Farben** - at the bottom of **Bearbeiten**, one colour per subject. Every
   lesson of the same subject gets it: in the grid, in tomorrow's list and on the
   tile. Without a choice, a subject keeps the colour computed from its name, so a
   fresh install is coloured too and every device agrees.
+
+### Which days are school days
+
+This choice lives in the browser, not in the household, and that is not
+carelessness: a module cannot add keys to `/preferences` (the server checks
+against a fixed list) and it does not see the database
+([MODULES.md](../../MODULES.md)), so the device is the only honest store. The
+consequence is the useful one - what annoys you on the phone may be fine on the
+kitchen computer.
+
+It is a *display* setting, and deliberately nothing more:
+
+- The **Morgen** tab and the dashboard tile still look at all seven days when they
+  search for the next school day. A hidden Saturday is a statement about columns,
+  not about whether the bus runs: silently dropping a lesson that exists would be
+  the one thing a timetable must not do.
+- The loaded window in `index.js#reload()` is still the full week, so a hidden day
+  cannot shorten what the views afterwards ask for.
+- What a hidden day *does* carry is reported in the panel rather than swallowed.
 
 The dashboard tile **Stunden morgen** shows the next school day. How much of it
 fits depends on the tile's height, and the tile picks between two layouts on its
@@ -180,7 +205,11 @@ and every week repeats from the pattern.
 ## Accessibility and house rules
 
 - The weekday grid scrolls sideways on its own; the page never scrolls
-  horizontally.
+  horizontally. Its columns are all the same width (`table-layout: fixed`), so a
+  day carrying a room does not get the wide column - the cells wrap long words
+  instead.
+- The checkboxes in **Schultage** are the core's `.form-check`, not a new one:
+  size, hit area and the "one voice" rule for the accent live there.
 - The colour of a subject is either chosen in **Farben** or computed from the
   subject name (FNV-1a over a mid-tone palette). Either way the text colour on a
   block is computed for contrast, not fixed - a yellow subject gets dark text, a
@@ -208,11 +237,13 @@ missing file would turn `npm test` red there.
 
 `timetable.test.js` covers the pure functions - cycle arithmetic against the
 server's own formula, date arithmetic across daylight saving, the row/column
-building of the grid, the colour chain (the hex grammar, listing the subjects of
-a plan, spreading one colour over every row of a subject, resolving a lesson's
-colour in its three stages, and falling back to the computed colour when the
-stored value is missing or unusable), and how much of a school day the dashboard
-tile carries.
+building of the grid, which days count as school days (the normaliser, the
+window built for the household's week start, the cycle positions read off the
+anchor rather than the index, and what a hidden day still carries), the colour
+chain (the hex grammar, listing the subjects of a plan, spreading one colour over
+every row of a subject, resolving a lesson's colour in its three stages, and
+falling back to the computed colour when the stored value is missing or
+unusable), and how much of a school day the dashboard tile carries.
 `school-planner.test.js` covers the delivery promises: every used translation key
 present in both locales, the module accent in `theme.js` equal to the one in
 `module.json`, every file the manifest names actually existing (a missing widget
@@ -220,9 +251,13 @@ entry makes the whole module load as errored), the four promises the colour rest
 on - that the colour field is attached outside the overlay, that a colour is
 attached to the period before it is written, that a missing colour field is
 created rather than quietly skipped, and that the palette reaches the rendering
-and the writing side alike - and the tile's arithmetic, which is compared against
-the core's own grid (`grid-auto-rows` in `dashboard.css`, `--space-5` in
-`tokens.css`) so the estimate cannot drift away from the layout it describes.
+and the writing side alike - the school-day promises (that the two grids ask for
+the shown days while the loader keeps the full week, that the choice is stored
+per device and survives a reload, that the panel hides nothing silently, and that
+the last day cannot be switched off) - and the tile's arithmetic, which is
+compared against the core's own grid (`grid-auto-rows` in `dashboard.css`,
+`--space-5` in `tokens.css`) so the estimate cannot drift away from the layout it
+describes.
 
 
 ## Layout

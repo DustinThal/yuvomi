@@ -369,6 +369,24 @@
   color: var(--color-text-primary);
 }
 
+/* ── Die Schultage ────────────────────────────────────────────────────────── */
+
+/* Sieben Kaestchen, die umbrechen duerfen: auf einem Telefon passen sie nicht
+ * in eine Reihe, und eine Reihe, die seitlich scrollt, sieht aus wie ein
+ * abgeschnittener Inhalt.
+ *
+ * Das Kaestchen selbst ist `.form-check` des Kerns - Groesse, Trefferflaeche,
+ * Hakenfarbe und die Eine-Stimme-Regel stehen dort. Eine eigene Regel waere die
+ * Art Dublette, die beim naechsten Umbau des Kerns stehen bleibt; nur das
+ * Umbruchverhalten ist hier zu entscheiden, weil der Kern seine Kaestchen in
+ * einer Reihe erwartet. */
+.school-dayboxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  margin: var(--space-2) 0 0;
+}
+
 .school-colors__list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));

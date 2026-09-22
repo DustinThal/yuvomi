@@ -46,6 +46,11 @@
   "colors.newField": "Beim ersten Wählen legt der Stundenplan das Feld Farbe im Schichtplan an - dort wird die Farbe gespeichert.",
   "colors.failed": "Die Farbe konnte nicht gespeichert werden",
 
+  "days.heading": "Schultage ({{count}})",
+  "days.hint": "Welche Tage der Plan zeigt. Die Wahl gilt für dieses Gerät - am Küchenrechner darf stehen, was am Handy stört. Der Plan selbst ändert sich nicht: ein ausgeblendeter Tag behält seine Stunden.",
+  "days.hidden": "Achtung: am {{days}} stehen noch Stunden ({{subjects}}). Sie werden nicht mehr angezeigt, bleiben aber im Plan.",
+  "days.lastOne": "Ein Tag muss bleiben - ein Plan ohne Spalten wäre keiner.",
+
   "times.edit": "Zeiten von {{period}} ändern",
   "times.start": "Beginn",
   "times.end": "Ende",

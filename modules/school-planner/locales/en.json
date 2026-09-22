@@ -46,6 +46,11 @@
   "colors.newField": "The first time you pick one, the timetable creates the field Farbe in the shift planner - that is where the colour is stored.",
   "colors.failed": "The colour could not be saved",
 
+  "days.heading": "School days ({{count}})",
+  "days.hint": "Which days the timetable shows. This choice applies to this device - what annoys you on the phone may be fine on the kitchen computer. The plan itself does not change: a hidden day keeps its lessons.",
+  "days.hidden": "Careful: {{days}} still carries lessons ({{subjects}}). They are no longer shown, but they stay in the plan.",
+  "days.lastOne": "One day has to stay - a timetable without columns would not be one.",
+
   "times.edit": "Change the times of {{period}}",
   "times.start": "Start",
   "times.end": "End",

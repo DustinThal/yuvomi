@@ -115,6 +115,104 @@ export function weekDateKeys(dateKey, weekStartsOn = 1) {
   return Array.from({ length: 7 }, (_, index) => addDays(first, index));
 }
 
+/* ── Welche Tage ein Schultag sind ────────────────────────────────────────── */
+
+/**
+ * Die Tage, die ein Stundenplan ohne weitere Angabe zeigt.
+ *
+ * Montag bis Freitag, und das ist eine Behauptung ueber die Welt und keine
+ * Vorliebe: eine Woche hat sieben Spalten, und ein Plan, der zwei davon
+ * regelmaessig leer zeigt, ist breiter als noetig. Wer Samstag Unterricht hat,
+ * schaltet ihn in den Einstellungen dazu.
+ *
+ * ISO-Wochentage (1 = Montag .. 7 = Sonntag), weil das die Form ist, in der ein
+ * Mensch ueber "Samstag" redet. Der Wochenanfang des Haushalts ist eine andere
+ * Frage und wird erst beim Rechnen angewendet.
+ */
+export const SCHOOL_DAYS_DEFAULT = Object.freeze([1, 2, 3, 4, 5]);
+
+/**
+ * Die gewaehlten Schultage als ISO-Wochentage, aufsteigend und ohne Doppelte.
+ *
+ * Alles Unbrauchbare - kein Feld, keine Liste, Zahlen ausserhalb 1..7,
+ * Zeichenketten aus dem Browserspeicher, Doppelte - faellt heraus. Bleibt nichts
+ * uebrig, gilt die Voreinstellung: "kein Tag" ist keine Woche, die man anzeigen
+ * koennte, und ein Plan ohne Spalten sieht aus wie ein Fehler statt wie eine
+ * Wahl. Genau deshalb laesst die Oberflaeche den letzten Tag auch nicht
+ * abwaehlen.
+ */
+export function normalizeSchoolDays(value) {
+  const list = Array.isArray(value) ? value : [];
+  const days = [...new Set(list
+    .map((day) => Number(day))
+    .filter((day) => Number.isInteger(day) && day >= 1 && day <= 7))]
+    .sort((a, b) => a - b);
+  return days.length ? days : [...SCHOOL_DAYS_DEFAULT];
+}
+
+/**
+ * Die gezeigten Tage einer Woche - in der Reihenfolge der Haushaltswoche.
+ *
+ * Gefiltert wird die volle Woche und nicht neu zusammengesetzt: der
+ * Wochenanfang des Haushalts bleibt damit die Ordnung, und die Laenge ist die
+ * einzige Zahl, die sich aendert. `weekDateKeys()` liefert bei einem kaputten
+ * Datum eine leere Liste - die bleibt leer.
+ */
+export function schoolDateKeys(dateKey, weekStartsOn = 1, schoolDays = SCHOOL_DAYS_DEFAULT) {
+  const shown = new Set(normalizeSchoolDays(schoolDays));
+  return weekDateKeys(dateKey, weekStartsOn).filter((key) => shown.has(isoWeekday(key)));
+}
+
+/**
+ * Die Positionen eines 7er-Zyklus, die auf einen gezeigten Tag fallen.
+ *
+ * Das Bearbeiten-Raster ist das Muster und nicht die Woche: seine Spalte 3 ist
+ * nicht Mittwoch, sondern "drei Tage nach dem Anker". Ob ein versteckter Tag
+ * etwas verschiebt, entscheidet der Anker - und genau deshalb rechnet diese
+ * Funktion aus dem Datum und nicht aus dem Index.
+ */
+export function schoolPositions(anchorDateKey, schoolDays = SCHOOL_DAYS_DEFAULT) {
+  const shown = new Set(normalizeSchoolDays(schoolDays));
+  const positions = [];
+  for (let position = 0; position < 7; position += 1) {
+    if (shown.has(isoWeekday(addDays(anchorDateKey, position)))) positions.push(position);
+  }
+  return positions;
+}
+
+/**
+ * Was auf einem versteckten Tag stehen bleibt - je ISO-Wochentag die Faecher.
+ *
+ * Eine Einstellung, die Unterricht verschwinden laesst, ohne es zu sagen, ist
+ * die Art von Hilfe, die Daten versteckt: das Raster sieht dann aufgeraeumt aus
+ * und ist es nicht. Die Einstellung darf trotzdem gelten - es kann gewollt sein,
+ * einen Samstag loszuwerden -, aber sie muss es sagen koennen.
+ *
+ * Gezaehlt wird, was der Plan wirklich hergibt: eine Zeile ohne Fach ist keine
+ * Stunde, egal an welchem Tag sie steht.
+ */
+export function hiddenSubjects(patternDays, anchorDateKey, schoolDays, { subjectFieldId } = {}) {
+  const byDay = new Map();
+  if (subjectFieldId == null || parseDateKey(anchorDateKey) === null) return byDay;
+  const shown = new Set(normalizeSchoolDays(schoolDays));
+  for (const row of patternDays ?? []) {
+    const position = Number(row?.position);
+    // Jede Position ab 0 wird auf ein Datum gerechnet und nicht auf 0..6
+    // begrenzt: der Zyklus darf laenger als sieben Tage sein (A/B-Wochen), und
+    // Position 12 ist dann derselbe Samstag wie Position 5. Ein Deckel bei 6
+    // wuerde genau die Stunden verschweigen, fuer die es diesen Hinweis gibt.
+    if (!Number.isInteger(position) || position < 0) continue;
+    const day = isoWeekday(addDays(anchorDateKey, position));
+    if (day == null || shown.has(day)) continue;
+    const values = row?.field_values ?? {};
+    const subject = String(values[subjectFieldId] ?? values[String(subjectFieldId)] ?? '').trim();
+    if (!subject) continue;
+    if (!byDay.has(day)) byDay.set(day, []);
+    byDay.get(day).push(subject);
+  }
+  return byDay;
+}
+
 /**
  * Farben fuer Faecher.
  *
