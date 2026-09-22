@@ -47,31 +47,10 @@ import {
   resolveFieldIds,
 } from '../data.js';
 import { MODULE_ACCENT } from '../theme.js';
-import { addDays, nextDateWithLessons } from '../timetable.js';
+import { addDays, nextDateWithLessons, widgetRowPlan } from '../timetable.js';
 
 /** Wie weit die Suche nach dem naechsten Schultag reicht - wie auf der Seite. */
 const LOOKAHEAD_DAYS = 21;
-
-/**
- * Wie viele Zeilen die Kachel traegt.
- *
- * Dieselbe Regel wie `listRowCap()` in public/pages/dashboard.js: der
- * Zeilen-Span der Groessenklasse entscheidet, nicht die Pixelhoehe (die kennt
- * erst der Browser, und eine Zeilenzahl, die vom Messzeitpunkt abhaengt,
- * springt beim Laden). Die Zahlen sind eine Abschrift, weil die Funktion
- * dashboard-lokal und nicht exportiert ist - die Begruendung steht dort.
- *
- * Der Deckel ist hier wichtiger als anderswo: ein Schultag hat acht Stunden,
- * die Kachel hat Platz fuer fuenf, und `.widget` schneidet den Rest ab. Die
- * Badge im Kopf zaehlt deshalb ALLE Stunden und nicht die gezeigten - sonst
- * verspraeche "5" einen kurzen Tag, den es nicht gibt.
- */
-const ROW_CAP_TALL = 5;
-const ROW_CAP_SHORT = 3;
-
-function rowCap(size) {
-  return Number(String(size ?? '1x1').split('x')[1]) >= 2 ? ROW_CAP_TALL : ROW_CAP_SHORT;
-}
 
 /**
  * Das eigene Stylesheet nachladen, einmal.
@@ -148,12 +127,24 @@ function emptyState() {
   </div>`;
 }
 
-function lessonRow(lesson) {
+/**
+ * Eine Zeile der Kachel.
+ *
+ * `dense` ist die einzeilige Fassung: Uhrzeit und Fach, der Raum dahinter in
+ * derselben Zeile. Zwei Zeilen je Stunde sind schoener zu lesen, aber ein
+ * halber Schultag ist schlimmer als ein ganzer ohne Raum - und der Raum steht
+ * weiter da, solange die Breite reicht, weil ihn die Ellipse des Fachs von
+ * hinten abschneidet: erst den Raum, nie das Fach.
+ */
+function lessonRow(lesson, dense) {
   const meta = [lesson.room, lesson.teacher].filter(Boolean).map(esc).join(' · ');
+  const inline = dense && meta
+    ? `<span class="school-widget__meta school-widget__meta--inline"> · ${meta}</span>`
+    : '';
   return `<li class="school-widget__row" style="--lesson-color:${esc(lesson.color)}">
     <span class="school-widget__time">${esc(lesson.startTime || '')}</span>
-    <span class="school-widget__subject">${esc(lesson.subject || lesson.periodName || '')}</span>
-    ${meta ? `<span class="school-widget__meta">${meta}</span>` : ''}
+    <span class="school-widget__subject">${esc(lesson.subject || lesson.periodName || '')}${inline}</span>
+    ${!dense && meta ? `<span class="school-widget__meta">${meta}</span>` : ''}
   </li>`;
 }
 
@@ -218,7 +209,10 @@ export async function renderWidget(container, { size } = {}) {
     return;
   }
 
-  const cap = rowCap(size);
+  // Wie viel von diesem Tag auf die Kachel passt - und in welcher Fassung. Die
+  // Entscheidung faellt in `widgetRowPlan()`, damit sie ohne Browser pruefbar
+  // bleibt; hier wird nur noch gezeichnet.
+  const { dense, cap, more } = widgetRowPlan(size, lessons.length);
   const shown = lessons.slice(0, cap);
   const day = dayLabel(target, { weekday: 'long', day: 'numeric', month: 'long' });
   const isTomorrow = target === tomorrow;
@@ -226,11 +220,14 @@ export async function renderWidget(container, { size } = {}) {
     ? ''
     : `<p class="school-widget__note">${esc(t('extensions.school-planner.tomorrow.freeTomorrow'))}</p>`;
 
+  // Die Badge im Kopf zaehlt ALLE Stunden des Tages und nicht die gezeigten:
+  // sonst verspraeche "5" einen kurzen Tag, den es nicht gibt. Was die Kachel
+  // nicht zeigt, nennt die Zeile darunter.
   container.insertAdjacentHTML('afterbegin', header(title, lessons.length) + `
     <div class="widget__body school-widget">
       <p class="school-widget__day">${esc(day)}</p>
       ${note}
-      <ul class="school-widget__list">${shown.map(lessonRow).join('')}</ul>
-      ${lessons.length > cap ? `<p class="school-widget__more">${esc(t('extensions.school-planner.widgets.more', { rest: lessons.length - cap }))}</p>` : ''}
+      <ul class="school-widget__list">${shown.map((lesson) => lessonRow(lesson, dense)).join('')}</ul>
+      ${more > 0 ? `<p class="school-widget__more">${esc(t('extensions.school-planner.widgets.more', { rest: more }))}</p>` : ''}
     </div>`);
 }

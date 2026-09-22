@@ -336,3 +336,79 @@ test('eine Farbe wird angeheftet, bevor sie geschrieben wird', () => {
   // Und der Wert kommt durch die Grammatik, bevor er in eine CSS-Variable geht.
   assert.match(body, /normalizeColor\(rawColor\)/, 'der Wert wird ungeprueft uebernommen');
 });
+
+test('die Kachel zaehlt, was sie nicht zeigt', () => {
+  // Der gemeldete Fehler: ein Tag mit acht Stunden zeigte fuenf, mit Pausen
+  // fehlten drei - und weil `.widget` abschneidet, sah die Liste vollstaendig
+  // aus. Die Rechnung selbst steht in `widgetRowPlan()` und ist dort geprueft;
+  // hier steht die Zusage, dass die Kachel sie BENUTZT, statt weiter selbst zu
+  // deckeln.
+  // Die Zeilenenden sind im Arbeitsbaum CRLF, die Muster unten sind es nicht:
+  // erst vereinheitlichen, sonst trifft `\n}` das Zeilenende nicht.
+  const source = read('widgets/tomorrow.js').replace(/\r\n/g, '\n');
+  const fn = /export async function renderWidget\(container, \{ size \} = \{\}\)\s*\{([\s\S]*?)\n\}\n/.exec(source);
+  assert.ok(fn, 'renderWidget fehlt');
+  const body = fn[1].replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+  assert.match(body, /const \{ dense, cap, more \} = widgetRowPlan\(size, lessons\.length\)/,
+    'die Kachel deckelt selbst, statt widgetRowPlan zu fragen');
+  assert.match(body, /lessons\.slice\(0, cap\)/, 'gezeigt wird nicht der gedeckelte Satz');
+  assert.match(body, /\$\{shown\.map\(\(lesson\) => lessonRow\(lesson, dense\)\)/, 'die Fassung erreicht die Zeile nicht');
+  // Die Mehr-Zeile nennt die Zahl, die die Planung ausgerechnet hat. Ein
+  // zweites `lessons.length - cap` waere dieselbe Zahl aus einer zweiten Quelle -
+  // und die eine von beiden waere irgendwann falsch.
+  assert.match(body, /more > 0 \?/, 'die Mehr-Zeile haengt nicht an ihrem eigenen Wert');
+  assert.match(body, /\{ rest: more \}/, 'die Mehr-Zeile rechnet den Rest selbst aus');
+  assert.doesNotMatch(body, /lessons\.length - cap/, 'der Rest wird zweimal gerechnet');
+  // Und der Deckel des Kerns ist weg: eine Abschrift, die bleibt, deckelt weiter.
+  assert.doesNotMatch(source, /ROW_CAP_TALL|ROW_CAP_SHORT/, 'der alte Deckel steht noch im Modul');
+});
+
+test('die einzeilige Fassung laesst den Raum nicht fallen', () => {
+  // Dicht heisst "eine Zeile", nicht "ohne Raum": der Raum steht hinter dem
+  // Fach, und gekuerzt wird von hinten - also erst der Raum, nie das Fach.
+  const source = read('widgets/tomorrow.js').replace(/\r\n/g, '\n');
+  const fn = /function lessonRow\(lesson, dense\)\s*\{([\s\S]*?)\n\}/.exec(source);
+  assert.ok(fn, 'lessonRow fehlt');
+  const body = fn[1].replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+  // Die Bedingung muss die der dichten Zeile sein: `assert.match(body, /dense && meta/)`
+  // waere zu lose - `!dense && meta` (die zweite Zeile) enthaelt denselben Text.
+  assert.match(body, /const inline = dense && meta/, 'dicht entscheidet nicht ueber den Raum');
+  assert.match(body, /school-widget__meta--inline/, 'der Raum hat in der dichten Zeile keine eigene Regel');
+  // Die zweite Zeile gibt es nur, wenn NICHT dicht geschrieben wird - sonst
+  // stuende der Raum zweimal da.
+  assert.match(body, /\$\{!dense && meta \?/, 'die zweite Zeile fehlt auch in der dichten Fassung nicht');
+  // Die Kuerzung ist die des Fachs: die Regel fuer die dichte Zeile darf kein
+  // eigenes `overflow` setzen, sonst schneidet sie den Raum ab, statt ihn mit
+  // dem Fach zusammen zu kuerzen.
+  const css = read('style.css').replace(/\r\n/g, '\n');
+  const rule = /\.school-widget__meta--inline\s*\{([\s\S]*?)\n\}/.exec(css);
+  assert.ok(rule, 'die Regel fuer den Raum in der dichten Zeile fehlt');
+  assert.match(rule[1], /overflow: visible/, 'die dichte Zeile kuerzt fuer sich statt mit dem Fach');
+});
+
+test('die Kachel rechnet mit den echten Rastermassen des Kerns', () => {
+  // `widgetRowBudget()` nennt zwei Zahlen aus dem Kern: die Hoehe einer
+  // Rasterzeile (132px, `grid-auto-rows` in dashboard.css) und den Abstand
+  // zwischen zweien (20px, `--space-5` in tokens.css). Beide sind Abschriften -
+  // und eine Abschrift ohne Waechter veraltet still: aendert der Kern den
+  // Abstand, deckelt die Kachel wieder mitten im Tag, ohne dass etwas rot wird.
+  // Der Test liest die Kern-Dateien, wenn es sie gibt, und sagt es, wenn nicht -
+  // das Modul wird auch als Ordner ohne Kern ausgeliefert.
+  const tokensPath = path.join(ROOT, '..', '..', 'public', 'styles', 'tokens.css');
+  const dashboardPath = path.join(ROOT, '..', '..', 'public', 'styles', 'dashboard.css');
+  if (!existsSync(tokensPath) || !existsSync(dashboardPath)) {
+    assert.ok(true, 'Kern-Stylesheets nicht vorhanden - Modul wurde einzeln kopiert');
+    return;
+  }
+  const module = read('timetable.js');
+
+  const gap = /--space-5:\s*(\d+)px/.exec(readFileSync(tokensPath, 'utf8').replace(/\r\n/g, '\n'));
+  assert.ok(gap, '--space-5 steht nicht mehr in tokens.css - Name geaendert?');
+  assert.match(module, new RegExp(`GRID_GAP_PX = ${gap[1]};`),
+    'der Abstand zwischen zwei Rasterzeilen ist nicht mehr --space-5');
+
+  const gridRow = /grid-auto-rows:\s*minmax\((\d+)px/.exec(readFileSync(dashboardPath, 'utf8').replace(/\r\n/g, '\n'));
+  assert.ok(gridRow, 'grid-auto-rows steht nicht mehr in dashboard.css - Raster geaendert?');
+  assert.match(module, new RegExp(`GRID_ROW_PX = ${gridRow[1]};`),
+    'die Hoehe einer Rasterzeile ist nicht mehr die des Kerns');
+});

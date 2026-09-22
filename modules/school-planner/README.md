@@ -66,6 +66,25 @@ card under *Schichtarten* in the shift planner. Both write the same row.
   tile. Without a choice, a subject keeps the colour computed from its name, so a
   fresh install is coloured too and every device agrees.
 
+The dashboard tile **Stunden morgen** shows the next school day. How much of it
+fits depends on the tile's height, and the tile picks between two layouts on its
+own - two lines per lesson (time, subject, room and teacher below) while the day
+fits, one line per lesson (time and subject, room after it) once it does not:
+
+| Tile | Two lines per lesson | One line per lesson |
+| --- | --- | --- |
+| 2x2 | 5 lessons | 8 lessons |
+| 2x3 | 8 lessons | 14 lessons |
+| 2x4 | 12 lessons | 20 lessons |
+
+So a normal eight-lesson day stands completely on a 2x2 tile. A day with breaks
+in it is longer than that, and **2x3 is the size that carries a whole day with
+breaks**. Whatever still does not fit is counted in a line below the list:
+nothing disappears without a number, and the badge in the header always counts
+the whole day rather than the visible part. On a flat tile (2x1, 3x1) the
+one-line layout would not gain a single row, so the tile keeps its two lines and
+the three rows it always had - there the number below the list is the only change.
+
 Clearing subject, room and teacher makes the period free: an empty cell is the
 absence of a row, not a row with an empty value.
 
@@ -139,6 +158,10 @@ and every week repeats from the pattern.
   blue one light.
 - A value typed into the *Farbe* field in the shift planner is not trusted as
   CSS: it has to be a hex colour to be used.
+- The tile never scrolls inside itself: the core removed `overflow: auto` from
+  `.widget__body` on purpose (Issue #166, nested scroll containers blank the
+  screen on iOS and Android). It shows fewer rows instead - and says how many it
+  left out.
 - No dash is ever an em dash or en dash.
 - The composition mode is `full`, so the page header carries no measure
   (`PAGE-016` in `test/test-frontend-audit.js`).
@@ -156,15 +179,20 @@ missing file would turn `npm test` red there.
 
 `timetable.test.js` covers the pure functions - cycle arithmetic against the
 server's own formula, date arithmetic across daylight saving, the row/column
-building of the grid, and the colour chain (the hex grammar, listing the subjects
-of a plan, spreading one colour over every row of a subject, and falling back to
-the computed colour when the stored value is missing or unusable).
+building of the grid, the colour chain (the hex grammar, listing the subjects of
+a plan, spreading one colour over every row of a subject, and falling back to the
+computed colour when the stored value is missing or unusable), and how much of a
+school day the dashboard tile carries.
 `school-planner.test.js` covers the delivery promises: every used translation key
 present in both locales, the module accent in `theme.js` equal to the one in
 `module.json`, every file the manifest names actually existing (a missing widget
-entry makes the whole module load as errored), and the two promises the colour
-rests on - that the colour field is attached outside the overlay, and that a
-colour is attached to the period before it is written.
+entry makes the whole module load as errored), the two promises the colour rests
+on - that the colour field is attached outside the overlay, and that a colour is
+attached to the period before it is written - and the tile's arithmetic, which is
+compared against the core's own grid (`grid-auto-rows` in `dashboard.css`,
+`--space-5` in `tokens.css`) so the estimate cannot drift away from the layout it
+describes.
+
 
 ## Layout
 

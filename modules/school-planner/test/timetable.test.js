@@ -40,6 +40,8 @@ import {
   normalizeColor,
   subjectsInPlan,
   spreadSubjectColor,
+  widgetRowBudget,
+  widgetRowPlan,
 } from '../timetable.js';
 
 // 2026-01-05 ist ein Montag, 2026-09-21 ebenfalls - beide als Anker geeignet.
@@ -394,4 +396,139 @@ test('spreadSubjectColor kann eine Farbe auch wieder wegnehmen', () => {
   assert.deepEqual(spreadSubjectColor(rows, { subjectFieldId: 1, subject: '' }), rows);
   assert.deepEqual(spreadSubjectColor(rows, { subjectFieldId: 1, subject: 'Mathematik' }), rows);
   assert.deepEqual(spreadSubjectColor(null, { subjectFieldId: 1, colorFieldId: 2, subject: 'Mathematik' }), []);
+});
+
+/* ── Wie viel von einem Schultag auf die Kachel passt ─────────────────────── */
+
+/* Der gemeldete Fehler: ein Tag mit acht Stunden zeigte fuenf, mit Pausen fehlten
+ * drei - und weil `.widget` abschneidet, sah die Liste trotzdem vollstaendig aus.
+ * Die Tests hier halten die Zusage fest, die das behebt: was nicht gezeigt wird,
+ * wird GEZAEHLT. Der Deckel selbst ist eine Schaetzung aus dem Raster und darf
+ * sich aendern; diese Regel nicht. */
+
+test('widgetRowBudget haelt die Zeilen des Kerns als Untergrenze', () => {
+  // `listRowCap()` in public/pages/dashboard.js: 3 Zeilen flach, 5 Zeilen hoch.
+  // Die beiden Zahlen sind die bestehende Zusage des Kerns an seine eigenen
+  // Listen; die Kachel unterschreitet sie nicht, auch wo ihre hoeheren Zeilen
+  // rechnerisch weniger zuliessen.
+  assert.equal(widgetRowBudget('1x1').full, 3);
+  assert.equal(widgetRowBudget('2x1').full, 3);
+  assert.equal(widgetRowBudget('1x2').full, 5);
+  assert.equal(widgetRowBudget('2x2').full, 5);
+});
+
+test('widgetRowBudget waechst mit der Hoehe und nicht mit der Breite', () => {
+  // Aufsteigende Hoehe, absteigende Breite: die Zeilenzahl kommt aus dem
+  // Zeilen-Span, nicht aus der Spaltenzahl.
+  const sizes = ['4x1', '1x2', '2x3', '1x4'];
+  const full = sizes.map((size) => widgetRowBudget(size).full);
+  const compact = sizes.map((size) => widgetRowBudget(size).compact);
+  for (let index = 1; index < sizes.length; index += 1) {
+    assert.ok(full[index] > full[index - 1], `${sizes[index]} muss mehr tragen als ${sizes[index - 1]}`);
+    assert.ok(compact[index] > compact[index - 1], `${sizes[index]} dichter als ${sizes[index - 1]}`);
+  }
+  // Eine breitere Kachel macht die Zeile laenger, nicht zahlreicher.
+  assert.deepEqual(widgetRowBudget('2x2'), widgetRowBudget('4x2'));
+  assert.deepEqual(widgetRowBudget('1x3'), widgetRowBudget('3x3'));
+  assert.deepEqual(widgetRowBudget('1x2'), widgetRowBudget('2x2'));
+});
+
+test('widgetRowBudget rechnet aus dem Raster', () => {
+  // Die Rechnung an einem Beispiel, damit sie nachvollziehbar bleibt und nicht
+  // nur mit sich selbst uebereinstimmt. Ein 2x3-Feld ist drei Rasterzeilen hoch:
+  // 3 * 132px plus zweimal der Abstand von 20px = 436px. Davon gehen Kopf und
+  // Innenabstand (64px) und die Tageszeile (24px) ab, bleiben 348px. Eine
+  // zweizeilige Stunde braucht 40px, eine einzeilige 24px.
+  assert.equal(widgetRowBudget('2x3').full, 8, '348px / 40px');
+  assert.equal(widgetRowBudget('2x3').compact, 14, '348px / 24px');
+});
+
+test('ein ganzer Schultag passt auf die Kachel', () => {
+  // Der gemeldete Fall: acht Stunden auf einem 2x2-Feld. Vorher standen fuenf
+  // da, die letzten drei fehlten lautlos.
+  const day = widgetRowPlan('2x2', 8);
+  assert.equal(day.cap, 8, 'acht Stunden muessen alle dastehen');
+  assert.equal(day.more, 0);
+  assert.equal(day.dense, true, 'dafuer schreibt die Kachel einzeilig');
+
+  // Mit Pausen wird der Tag laenger als jede zweizeilige Kachel. Auf 2x2 bleibt
+  // es eng - dann wird gezaehlt statt abgeschnitten -, auf 2x3 steht er ganz.
+  assert.equal(widgetRowPlan('2x2', 11).more > 0, true, 'was nicht passt, wird gezaehlt');
+  assert.equal(widgetRowPlan('2x3', 11).cap, 11);
+  assert.equal(widgetRowPlan('2x3', 11).more, 0);
+});
+
+test('ein kurzer Tag behaelt Raum und Lehrer', () => {
+  // Einzeilig ist die Notloesung fuer einen langen Tag, keine neue Anzeige: wer
+  // in den Deckel passt, behaelt die zweite Zeile mit Raum und Lehrer.
+  for (const size of ['2x2', '2x3', '2x4']) {
+    const budget = widgetRowBudget(size).full;
+    const plan = widgetRowPlan(size, budget);
+    assert.equal(plan.dense, false, `${size}: ${budget} Stunden passen zweizeilig`);
+    assert.equal(plan.cap, budget);
+    assert.equal(plan.more, 0);
+    // Eine Stunde mehr kippt in die einzeilige Fassung - und gewinnt dabei
+    // Zeilen. Ohne diesen Gewinn waere der Wechsel ein Verlust und der Raum um
+    //sonst weg.
+    const next = widgetRowPlan(size, budget + 1);
+    assert.equal(next.dense, true);
+    assert.ok(next.cap > plan.cap, `${size}: einzeilig muss mehr Zeilen ergeben`);
+    assert.equal(next.more, 0);
+  }
+});
+
+test('was nicht auf die Kachel passt, wird gezaehlt', () => {
+  // Die Regel, die den Fehler ausmacht: es gibt keinen Fall, in dem eine Stunde
+  // weder dasteht noch genannt wird. Geprueft ueber jede Groesse und jede
+  // Tageslaenge - der Deckel ist eine Schaetzung, diese Regel nicht.
+  for (const size of ['1x1', '2x1', '1x2', '2x2', '2x3', '2x4', '4x4']) {
+    const { full, compact } = widgetRowBudget(size);
+    const budget = Math.max(full, compact);
+    for (let count = 0; count <= budget + 3; count += 1) {
+      const plan = widgetRowPlan(size, count);
+      assert.equal(plan.cap + plan.more, count, `${size} mit ${count} Stunden verliert eine`);
+      assert.ok(plan.cap <= budget, `${size}: mehr Zeilen als Platz`);
+      assert.equal(plan.more > 0, plan.cap < count, `${size}: die Mehr-Zeile passt nicht zum Rest`);
+      // Und die Mehr-Zeile bekommt ihren eigenen Platz: wo dicht geschrieben
+      // wird, zeigt die Kachel so viele Zeilen, dass eine Zeile des Deckels fuer
+      // sie frei bleibt. Ohne diesen Abzug schoebe sie die letzte Stunde aus der
+      // Kachel.
+      if (plan.more > 0 && plan.dense) {
+        const used = widgetRowBudget(size).compact;
+        assert.ok(plan.cap < used, `${size} mit ${count}: die Mehr-Zeile verdraengt eine Stunde`);
+      }
+    }
+  }
+  // Ein Tag ohne Stunden und eine kaputte Zahl sind kein Sonderfall.
+  for (const count of [0, undefined, null, -3, 'acht']) {
+    assert.deepEqual(widgetRowPlan('2x2', count), { dense: false, cap: 0, more: 0 }, `"${String(count)}"`);
+  }
+});
+
+test('eine flache Kachel behaelt ihre Zeilen und zaehlt trotzdem', () => {
+  // Auf einem Feld mit einer Rasterzeile ist der Deckel die Zusage des Kerns (3
+  // Zeilen). Er wird nicht gekuerzt, auch nicht fuer die Mehr-Zeile: dort ist
+  // ohnehin kaum eine Zeile sichtbar, und eine Zeile weniger waere ein Verlust
+  // ohne Gewinn. Gezaehlt wird trotzdem - verschwiegen wird nichts.
+  const plan = widgetRowPlan('2x1', 7);
+  assert.equal(plan.dense, false);
+  assert.equal(plan.cap, 3, 'die drei Zeilen des Kerns bleiben');
+  assert.equal(plan.more, 4);
+});
+
+test('die einzeilige Fassung nur, wenn sie Zeilen gewinnt', () => {
+  // Ein flaches Feld hat so wenig Hoehe, dass die einzeilige Zeile rechnerisch
+  // nicht mehr Platz schafft als die zweizeilige Zusage des Kerns. Dort bleibt
+  // die Anzeige wie bisher: sonst verloere man ueberall den Raum und gewaenne
+  // nichts.
+  for (const size of ['1x1', '2x1', '3x1', '4x1']) {
+    const { full, compact } = widgetRowBudget(size);
+    assert.ok(compact <= full, `${size} darf nicht dichter rechnen als zweizeilig`);
+    assert.equal(widgetRowPlan(size, full + 4).dense, false);
+  }
+  // Eine Groessenangabe, die der Kern nicht kennt, faellt auf dieselbe flache
+  // Vorgabe zurueck wie `listRowCap()`: `String(size ?? '1x1')`.
+  for (const broken of [undefined, null, '', 'kaputt', '2', 'x', 2]) {
+    assert.deepEqual(widgetRowBudget(broken), widgetRowBudget('1x1'), `"${String(broken)}"`);
+  }
 });

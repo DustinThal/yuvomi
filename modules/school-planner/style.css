@@ -476,6 +476,19 @@
   white-space: nowrap;
 }
 
+/* Die dichte Kachel hat keine zweite Zeile: der Raum steht HINTER dem Fach. Er
+ * ist die Angabe, die zuerst entbehrlich ist - gekuerzt wird deshalb von der
+ * Ellipse des Fachs, und die schneidet von hinten ab: erst den Raum, nie das
+ * Fach. Das eigene `overflow` der Regel darueber wird hier zurueckgenommen, weil
+ * es auf einem Inline-Element wirkungslos waere und beim naechsten Wechsel von
+ * `display` still zu greifen anfinge. */
+.school-widget__meta--inline {
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+  overflow: visible;
+  text-overflow: clip;
+}
+
 .school-widget__more {
   margin: 0;
   font-size: var(--text-xs);

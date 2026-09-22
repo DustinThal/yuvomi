@@ -467,3 +467,96 @@ export function lessonSummary(lesson) {
   if (meta) parts.push(`(${meta})`);
   return parts.join(' ');
 }
+
+/* ── Wie viel Platz die Kachel hat ────────────────────────────────────────── */
+
+/** `grid-auto-rows` in public/styles/dashboard.css - eine Rasterzeile. */
+const GRID_ROW_PX = 132;
+/** `--space-5` - der Abstand zwischen zwei Rasterzeilen. */
+const GRID_GAP_PX = 20;
+/** Kopf und Innenabstand der Kachel (dashboard.css `.widget__header`, `.widget__body`). */
+const WIDGET_CHROME_PX = 64;
+/** Die Tageszeile ueber der Liste plus ihr Abstand. */
+const DAY_LINE_PX = 24;
+/** Eine zweizeilige Stunde (Fach, darunter Raum) samt Abstand zur naechsten. */
+const ROW_FULL_PX = 40;
+/** Eine einzeilige Stunde samt Abstand zur naechsten. */
+const ROW_DENSE_PX = 24;
+/** Was der Kern seinen eigenen Listen zubilligt: `listRowCap()` in dashboard.js. */
+const CORE_ROWS_SHORT = 3;
+const CORE_ROWS_TALL = 5;
+
+/**
+ * Wie viele Stunden die Dashboard-Kachel traegt - und wie viele, wenn sie dicht
+ * schreibt.
+ *
+ * Der Deckel war eine Abschrift von `listRowCap()` aus public/pages/dashboard.js
+ * und damit zu grob: der Kern kennt nur zwei Faelle (3 Zeilen flach, 5 Zeilen
+ * hoch), weil seine Listenzeilen alle gleich hoch sind. Eine Stunde ist aber
+ * zwei Zeilen hoch - Fach, darunter Raum -, ein Schultag hat acht Stunden und
+ * mehr, sobald Pausen mit im Plan stehen, und so sass der Deckel mitten im Tag.
+ * `.widget` hat `overflow: hidden`: was nicht passt, verschwindet lautlos.
+ *
+ * Gerechnet wird deshalb aus dem Raster selbst. Eine Rasterzeile ist 132px hoch
+ * (`grid-auto-rows: minmax(132px, auto)`), zwischen zwei Zeilen liegen 20px
+ * (`--space-5`), und von der Kachel gehen Kopf, Innenabstand und die Tageszeile
+ * ab. Der Rest wird durch die Hoehe einer Zeile geteilt - einmal durch die
+ * zweizeilige (40px), einmal durch die einzeilige (24px), die dann entsteht,
+ * wenn die Kachel dicht schreibt.
+ *
+ * Zwei Regeln halten das Ergebnis brauchbar:
+ *
+ * - **Der Kern ist die Untergrenze.** `full` faellt nie unter `listRowCap()`,
+ *   damit eine flache Kachel nicht weniger zeigt als bisher. Auf einem Feld mit
+ *   einer Rasterzeile ist der Platz rechnerisch knapp, aber der Deckel des Kerns
+ *   ist dort die bestehende Zusage und nicht meine, sie zu kuerzen. Fuer
+ *   `compact` gilt sie nicht: einzeilige Zeilen sind nur dann besser, wenn es
+ *   dadurch MEHR werden, und das entscheidet `widgetRowPlan()`.
+ * - **Lieber eine Zeile zu wenig als eine, die abgeschnitten wird.** Die
+ *   Rasterzeilen wachsen mit ihrem Inhalt (`minmax(132px, auto)`), gemessen wird
+ *   erst im Browser, und eine Zeilenzahl, die vom Messzeitpunkt abhaengt,
+ *   springt beim Laden. Die Rechnung ist deshalb eine Schaetzung, die absichtlich
+ *   rundet.
+ */
+export function widgetRowBudget(size) {
+  const rows = Number(String(size ?? '1x1').split('x')[1]) || 1;
+  const core = rows >= 2 ? CORE_ROWS_TALL : CORE_ROWS_SHORT;
+  const listPx = rows * GRID_ROW_PX + (rows - 1) * GRID_GAP_PX - WIDGET_CHROME_PX - DAY_LINE_PX;
+  return {
+    full: Math.max(core, Math.floor(listPx / ROW_FULL_PX)),
+    compact: Math.floor(listPx / ROW_DENSE_PX),
+  };
+}
+
+/**
+ * Was die Kachel von einem Tag zeigt: wie viele Zeilen, und in welcher Fassung.
+ *
+ * Die zweite Haelfte der Entscheidung, und die einzige Stelle, an der sie
+ * getroffen wird - der Aufrufer zeichnet nur noch. Drei Regeln:
+ *
+ * - **Dicht nur, wenn es mehr Zeilen gibt.** Auf einem Feld mit einer
+ *   Rasterzeile ist der Platz so knapp, dass die einzeilige Fassung rechnerisch
+ *   kuerzer waere als die zweizeilige Zusage des Kerns. Dann bleibt es bei der
+ *   alten Anzeige, statt fuer eine gewonnene Zeile den Raum ueberall zu
+ *   verlieren.
+ * - **Die Zeile "3 weitere" braucht selbst Platz.** Passt der Tag auch dicht
+ *   nicht, wird eine Zeile des Deckels fuer sie freigehalten: ohne diesen Abzug
+ *   schoebe die Mehr-Zeile die letzte Stunde aus der Kachel, und weil `.widget`
+ *   abschneidet, lautlos. Freigehalten wird nur, wo der Deckel aus dem Raster
+ *   kommt - auf einem flachen Feld ist er die Zusage des Kerns (3 Zeilen), und
+ *   die wird nicht gekuerzt, auch wenn dort ohnehin kaum eine Zeile sichtbar
+ *   ist. Die Mehr-Zeile steht dort trotzdem: verschwiegen wird nichts.
+ * - **Nie mehr Zeilen als Stunden.** `cap` ist der Deckel, nicht die Anzeige -
+ *   ein Tag mit vier Stunden bekommt vier Zeilen, auch wenn fuenf passen.
+ *
+ * `more` ist die Zahl, die die Mehr-Zeile nennt, und `0`, wenn alles dasteht.
+ */
+export function widgetRowPlan(size, lessonCount) {
+  const { full, compact } = widgetRowBudget(size);
+  const count = Math.max(0, Number(lessonCount) || 0);
+  const dense = count > full && compact > full;
+  const budget = dense ? compact : full;
+  const overflow = count > budget;
+  const cap = overflow && dense ? Math.max(1, budget - 1) : Math.min(count, budget);
+  return { dense, cap, more: count - cap };
+}
