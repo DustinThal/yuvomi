@@ -8,13 +8,15 @@
  *        laden) und die Form der Locale-Dateien (flach und ohne Praefix, weil
  *        der Kern sie so verschachtelt).
  *
- * Ausfuehren: node --test modules/school-planner/test/school-planner.test.js
+ * Ausfuehren: node --test "school-planner/test/*.test.js"
  *
- * Bewusst NICHT in der Suite-Kette von package.json - wie die Tests der reinen
- * Funktionen daneben: dieses Modul liegt unter `modules/`, ist damit gitignored
- * (`.gitignore`: `modules/*`) und wird als Ordner ausgeliefert. Ein
- * `test:`-Script auf eine Datei, die im Upstream-Checkout nicht existiert,
- * wuerde `npm test` dort rot machen.
+ * Bewusst NICHT in der Suite-Kette einer package.json - wie die Tests der reinen
+ * Funktionen daneben. In einem Yuvomi-Checkout liegt dieses Modul unter
+ * `modules/`, ist damit gitignored (`.gitignore`: `modules/*`) und existiert dort
+ * gar nicht: ein `test:`-Script auf diese Datei wuerde `npm test` im Upstream
+ * rot machen. In diesem Modul-Repository gibt es deshalb keine package.json im
+ * Ordner - der Ordner soll ueberallhin kopierbar bleiben, ohne dass etwas
+ * daneben noetig ist. Die Zeile oben steht im README.
  *
  * Die Dateien werden GELESEN und nicht importiert: `index.js` und
  * `widgets/tomorrow.js` importieren `/api.js` und `/utils/...`, also absolute
@@ -31,6 +33,24 @@ import path from 'node:path';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(HERE, '..');
+
+/**
+ * Wo der Kern liegt, gegen den zwei Pruefungen unten laufen.
+ *
+ * Dieses Modul liegt in seinem eigenen Repository (`yuvomi-school-planner`, mit
+ * dem Ordner `school-planner/` an dessen Wurzel). Dort zeigt `ROOT/../..` aus
+ * dem Klon heraus, und die beiden Pruefungen wuerden still bestehen, ohne etwas
+ * geprueft zu haben. Nur wenn der Ordner zusaetzlich in einem Yuvomi-Checkout
+ * unter `modules/` liegt, ist `ROOT/../..` zufaellig dessen Wurzel - darauf
+ * allein darf sich nichts verlassen. Deshalb nennt der Aufrufer den Kern:
+ *
+ *   YUVOMI_CORE=/pfad/zu/yuvomi node --test school-planner/test/*.test.js
+ *
+ * Fehlt er, sagen die beiden Tests das im Klartext - ein uebersprungener Test,
+ * der wie ein bestandener aussieht, ist die Art Zusage, die dieses Modul nicht
+ * machen darf.
+ */
+const CORE = path.resolve(process.env.YUVOMI_CORE || path.join(ROOT, '..', '..'));
 
 const read = (relPath) => readFileSync(path.join(ROOT, relPath), 'utf8');
 const readJson = (relPath) => JSON.parse(read(relPath));
@@ -228,14 +248,12 @@ test('beide Zeiten sind Pflicht, bevor geschickt wird', () => {
   assert.ok(guard < write, 'die Pflicht-Pruefung steht hinter dem Schreibvorgang');
 });
 
-test('die Zeit-Grammatik ist dieselbe wie die des Servers', () => {
+test('die Zeit-Grammatik ist dieselbe wie die des Servers', (t) => {
   // Zwei Kopien derselben Regel, und die des Servers gewinnt: laeuft sie
   // auseinander, weist der Server ab, was die Oberflaeche durchgelassen hat.
-  // Der Test liest die Server-Datei, wenn er sie findet - im Modulordner allein
-  // gibt es sie nicht, und dann sagt er das, statt still zu bestehen.
-  const serverPath = path.join(ROOT, '..', '..', 'server', 'middleware', 'validate.js');
+  const serverPath = path.join(CORE, 'server', 'middleware', 'validate.js');
   if (!existsSync(serverPath)) {
-    assert.ok(true, 'Server-Datei nicht vorhanden - Modul wurde einzeln kopiert');
+    t.diagnostic(`uebersprungen: ${serverPath} fehlt - Kern nicht gefunden. Mit YUVOMI_CORE=<pfad> nachreichen.`);
     return;
   }
   const mine = /const TIME_PATTERN = (\/[^\n]+\/);/.exec(read('index.js'));
@@ -649,7 +667,7 @@ test('der letzte Tag laesst sich nicht abwaehlen', () => {
   assert.match(body.slice(guard, store), /return;/, 'die abgelehnte Wahl laeuft weiter');
 });
 
-test('die Kachel rechnet mit den echten Rastermassen des Kerns', () => {
+test('die Kachel rechnet mit den echten Rastermassen des Kerns', (t) => {
   // `widgetRowBudget()` nennt zwei Zahlen aus dem Kern: die Hoehe einer
   // Rasterzeile (132px, `grid-auto-rows` in dashboard.css) und den Abstand
   // zwischen zweien (20px, `--space-5` in tokens.css). Beide sind Abschriften -
@@ -657,10 +675,11 @@ test('die Kachel rechnet mit den echten Rastermassen des Kerns', () => {
   // Abstand, deckelt die Kachel wieder mitten im Tag, ohne dass etwas rot wird.
   // Der Test liest die Kern-Dateien, wenn es sie gibt, und sagt es, wenn nicht -
   // das Modul wird auch als Ordner ohne Kern ausgeliefert.
-  const tokensPath = path.join(ROOT, '..', '..', 'public', 'styles', 'tokens.css');
-  const dashboardPath = path.join(ROOT, '..', '..', 'public', 'styles', 'dashboard.css');
+  const tokensPath = path.join(CORE, 'public', 'styles', 'tokens.css');
+  const dashboardPath = path.join(CORE, 'public', 'styles', 'dashboard.css');
   if (!existsSync(tokensPath) || !existsSync(dashboardPath)) {
-    assert.ok(true, 'Kern-Stylesheets nicht vorhanden - Modul wurde einzeln kopiert');
+    const missing = [tokensPath, dashboardPath].filter((p) => !existsSync(p)).join(', ');
+    t.diagnostic(`uebersprungen: ${missing} fehlt - Kern nicht gefunden. Mit YUVOMI_CORE=<pfad> nachreichen.`);
     return;
   }
   const module = read('timetable.js');

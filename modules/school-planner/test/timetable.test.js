@@ -6,12 +6,14 @@
  *        Datums-Arithmetik ueber die Sommerzeit (sonst verschiebt sich der Plan
  *        zweimal im Jahr) und die Zeilen-/Spalten-Bildung des Rasters.
  *
- * Ausfuehren: node --test modules/school-planner/test/timetable.test.js
+ * Ausfuehren: node --test "school-planner/test/*.test.js"
  *
- * Bewusst NICHT in der Suite-Kette von package.json: dieses Modul liegt unter
- * `modules/`, ist damit gitignored (`.gitignore`: `modules/*`) und wird als
- * Ordner ausgeliefert. Ein `test:`-Script auf eine Datei zu setzen, die im
- * Upstream-Checkout nicht existiert, wuerde `npm test` dort rot machen.
+ * Bewusst NICHT in der Suite-Kette einer package.json: in einem Yuvomi-Checkout
+ * liegt dieses Modul unter `modules/`, ist damit gitignored (`.gitignore`:
+ * `modules/*`) und existiert dort gar nicht - ein `test:`-Script auf diese Datei
+ * wuerde `npm test` im Upstream rot machen. Der Modulordner selbst bringt
+ * deshalb keine package.json mit; er soll ueberallhin kopierbar bleiben. Die
+ * Zeile oben steht im README.
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';

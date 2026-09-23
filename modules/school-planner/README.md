@@ -10,28 +10,36 @@ This module exists because the shift planner's "school" option is a *preset*
 exam block, and nothing that knows what a subject is. It is a starting point for
 shifts, not a timetable.
 
-> **This module ships with the fork, not with Yuvomi.**
+> **This module is not part of Yuvomi - and no longer part of a fork either.**
 > `modules/*` is gitignored upstream (`.gitignore`), so a module folder can never
-> be part of a pull request against `ulsklyc/yuvomi`. It is committed here with
-> `git add -f` on purpose. The extension-module contract it implements is
-> [MODULES.md](../../MODULES.md), and that part *is* upstream and stable.
+> be part of a pull request against `ulsklyc/yuvomi`. It lives in its own
+> repository, `DustinThal/yuvomi-school-planner`, whose root holds this folder as
+> `school-planner/`. The extension-module contract it implements is
+> [MODULES.md](https://github.com/ulsklyc/yuvomi/blob/main/MODULES.md), and that
+> part *is* upstream and stable.
 
 ## Install
 
-Nothing to configure if you run this fork's `docker-compose.yml`: the module
-folder is inside the checkout, and the compose file already mounts
-`${MODULES_DIR:-./modules}` to `/app/modules`. `docker compose up -d` picks it up.
-
-For a stock Yuvomi image with the module kept outside the checkout:
+Clone the repository and mount it as the modules directory. The stock image is
+enough - the module needs no build step, and no local Yuvomi checkout:
 
 ```bash
-# .env
-MODULES_DIR=/absolute/path/to/yuvomi-modules
+git clone https://github.com/DustinThal/yuvomi-school-planner.git /srv/yuvomi-school-planner
+
+# .env, next to the compose file
+MODULES_DIR=/srv/yuvomi-school-planner
 ```
 
-Then put this folder at `$MODULES_DIR/school-planner/` and restart the service.
-New or changed module folders are scanned at runtime - no image rebuild. See
-[MODULES.md](../../MODULES.md) for Podman, Portainer, Unraid and TrueNAS.
+The folder name is not decoration: the manifest's `id` has to match the folder it
+is mounted from (`normalizeManifest()` in `server/services/modules.js`), so
+renaming `school-planner/` stops the module from loading.
+
+Then `docker compose up -d` - new or changed module folders are scanned at
+runtime, no image rebuild. Files sitting next to the folder are ignored (the
+scanner only looks at directories), so pointing `MODULES_DIR` at the repository
+root is exactly right. See
+[MODULES.md](https://github.com/ulsklyc/yuvomi/blob/main/MODULES.md) for Podman,
+Portainer, Unraid and TrueNAS.
 
 The module appears as **Stundenplan** in the navigation, in the custom-modules
 section, and as the dashboard widget **Stunden heute und morgen** (hidden by
@@ -78,7 +86,8 @@ card under *Schichtarten* in the shift planner. Both write the same row.
 This choice lives in the browser, not in the household, and that is not
 carelessness: a module cannot add keys to `/preferences` (the server checks
 against a fixed list) and it does not see the database
-([MODULES.md](../../MODULES.md)), so the device is the only honest store. The
+([MODULES.md](https://github.com/ulsklyc/yuvomi/blob/main/MODULES.md)), so the
+device is the only honest store. The
 consequence is the useful one - what annoys you on the phone may be fine on the
 kitchen computer.
 
@@ -142,8 +151,9 @@ the six periods it created.
 
 A chosen colour is a value of a fourth custom field, **Farbe**, on the lesson
 row. A module has no server and no database of its own, so `/api/v1` is the only
-place it may write at all ([MODULES.md](../../MODULES.md)) - and a field value is
-the only thing there that a household can read back.
+place it may write at all
+([MODULES.md](https://github.com/ulsklyc/yuvomi/blob/main/MODULES.md)) - and a
+field value is the only thing there that a household can read back.
 
 Two consequences, both deliberate:
 
@@ -246,13 +256,25 @@ and every week repeats from the pattern.
 ## Tests
 
 ```bash
-node --test modules/school-planner/test/timetable.test.js
-node --test modules/school-planner/test/school-planner.test.js
+node --test "school-planner/test/*.test.js"
+
+# aus einem Ordner ohne Yuvomi-Checkout heraus, mit dem Kern daneben:
+YUVOMI_CORE=/pfad/zu/yuvomi node --test "school-planner/test/*.test.js"
 ```
 
-Neither file is wired into `package.json`'s suite chain, on purpose: this folder
-does not exist in an upstream checkout, and a `test:` script pointing at a
-missing file would turn `npm test` red there.
+Nothing else is needed - no `npm install`, no build, no running Yuvomi: the two
+files import node built-ins and each other. (Quoting the glob matters in
+PowerShell and cmd, which would otherwise hand the pattern over as a literal.)
+
+Two tests read the *core* rather than the module, because two of the module's
+promises are promises about the core: that its own time grammar matches the
+server's (`server/middleware/validate.js`) and that its row arithmetic uses the
+core's real grid (`grid-auto-rows` in `public/styles/dashboard.css`, `--space-5`
+in `tokens.css`). Those files are not in this repository, so the tests take the
+core's location from `YUVOMI_CORE` and, when it is missing, report
+`uebersprungen: ... - Kern nicht gefunden` instead of passing quietly. A skipped
+check that looks like a passed one is the kind of promise this module must not
+make: run them with `YUVOMI_CORE` before trusting the two.
 
 `timetable.test.js` covers the pure functions - cycle arithmetic against the
 server's own formula, date arithmetic across daylight saving, the row/column
